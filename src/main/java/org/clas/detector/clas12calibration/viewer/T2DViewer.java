@@ -93,19 +93,23 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
     
     
     private JLabel[] superlayer = {new JLabel("", JLabel.CENTER),new JLabel("", JLabel.CENTER),new JLabel("", JLabel.CENTER),new JLabel("", JLabel.CENTER),new JLabel("", JLabel.CENTER),new JLabel("", JLabel.CENTER)};
-    public static JTextField[] alphaCuts1 = {new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7)};
-    public static JTextField[] alphaCuts2 = {new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7),new JTextField(7)};
+    public static JTextField[] alphaCuts1 = {new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9)};
+    public static JTextField[] alphaCuts2 = {new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9),new JTextField(9)};
     public static JTextField betaCut = new JTextField(3);
+    public static JTextField betaCut2 = new JTextField(3);
     public static JTextField fitresiCut = new JTextField(3);
     public static JTextField npassWires = new JTextField(3);
     public static JTextField nWires = new JTextField(3);
     public static JTextField deltaWire = new JTextField(3);
+    public static JTextField pid = new JTextField(3);
     public static JTextField enternofevents = new JTextField(3); 
+    public static JTextField sectorN = new JTextField(3); 
+    
     
     String[] calVars = {"default", "dc_team_rga_fall2018", ""};
     public static JComboBox  calVariation ;
     
-    String[] distBetaFCNSelect = {"old", "new"};
+    String[] distBetaFCNSelect = {"new", "old"};
     public static JComboBox  distBetaFCN ;
     
 
@@ -155,13 +159,13 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         settings.add(menuItem);
         menuBar.add(settings);
         
-        JMenu fits = new JMenu("Fits");
-        fits.getAccessibleContext().setAccessibleDescription("Choose parameters");
-        menuItem = new JMenuItem("Refit");
-        menuItem.getAccessibleContext().setAccessibleDescription("...");
-        menuItem.addActionListener(this);
-        fits.add(menuItem);
-        menuBar.add(fits);
+        //JMenu fits = new JMenu("Fits");
+        //fits.getAccessibleContext().setAccessibleDescription("Choose parameters");
+        //menuItem = new JMenuItem("Refit");
+        //menuItem.getAccessibleContext().setAccessibleDescription("...");
+        //menuItem.addActionListener(this);
+        //fits.add(menuItem);
+        //menuBar.add(fits);
            
         // create main panel
         mainPanel = new JPanel();	
@@ -500,7 +504,8 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         c.gridy = y;
         JPanel tgmPanel = new JPanel();
         for(int i = 0; i < 6; i++) {
-            superlayer[i].setText("Superlayer "+(i+1)+"    ");
+            //superlayer[i].setText("Superlayer "+(i+1)+"    ");
+            superlayer[i].setText("Superlayer "+(i+1)+"   ");
             tgmPanel.add(superlayer[i]);
         }
         trPanel.add(tgmPanel,c);
@@ -511,9 +516,9 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         c.gridx = 0;
         c.gridy = y;
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("alpha>"),c);
+        trPanel.add(new JLabel("alpha > "),c);
         for(int i = 0; i < 6; i++) {
-            alphaCuts1[i].setText("-30");
+            alphaCuts1[i].setText("-60");
             alphaCuts1[i].addActionListener(this);
             tgmPanel.add(alphaCuts1[i]);
         }
@@ -522,15 +527,15 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         trPanel.add(tgmPanel,c);
         c.gridx = 2;
         c.gridy = y;
+        trPanel.add(new JLabel(""),c);
         
-        //trPanel.add(new JLabel(""),c);
         y++;
         c.gridx = 0;
         c.gridy = y;
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("alpha<"),c);
+        trPanel.add(new JLabel("alpha < "),c);
         for(int i = 0; i < 6; i++) {
-            alphaCuts2[i].setText("30");
+            alphaCuts2[i].setText("60");
             alphaCuts2[i].addActionListener(this);
             tgmPanel.add(alphaCuts2[i]);
         }
@@ -539,142 +544,163 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         trPanel.add(tgmPanel,c);
         c.gridx = 2;
         c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        //
+
+        //---------------------------------------------------------------------
         y++;
-        c.gridx = 2;
-        c.gridy = y;
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(new JLabel(" "),c);
+
+        y++;
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(new JLabel(" "),c);
+
+        y++;
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(new JLabel("Event Selection"),c);
+
+        y++;
+        c.gridx = 0;
+	c.gridy = y;
+        trPanel.add(new JLabel("beta > "),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("beta>", JLabel.LEADING),c);
-        
         betaCut.setText("0.9");
         betaCut.addActionListener(this);
         tgmPanel.add(betaCut);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        //
+
         y++;
-        c.gridx = 2;
-        c.gridy = y;
+        c.gridx = 0;
+	c.gridy = y;
+        trPanel.add(new JLabel("beta < "),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("fitResi (um)>", JLabel.LEADING),c);
+        betaCut2.setText("1.0");
+        betaCut2.addActionListener(this);
+        tgmPanel.add(betaCut2);
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(tgmPanel,c);
         
+        y++;
+        c.gridx = 0;
+	c.gridy = y;
+        trPanel.add(new JLabel("fitResi (um) < "),c);
+        tgmPanel = new JPanel();
         fitresiCut.setText("1000");
-        betaCut.addActionListener(this);
+        fitresiCut.addActionListener(this);
         tgmPanel.add(fitresiCut);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        //npassWires ,nWires ,deltaWire
+
         y++;
-        c.gridx = 2;
-        c.gridy = y;
+        c.gridx = 0;
+	c.gridy = y;
+        trPanel.add(new JLabel("PID "),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("nhits>", JLabel.LEADING),c);
+        pid.setText("11");
+        pid.addActionListener(this);
+        tgmPanel.add(pid);
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(tgmPanel,c);
         
-        nWires.setText("4");
+        y++;
+        c.gridx = 0;
+	c.gridy = y;
+        trPanel.add(new JLabel("nhits > "),c);
+        tgmPanel = new JPanel();
+        nWires.setText("5");
         nWires.addActionListener(this);
         tgmPanel.add(nWires);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        
-        //
+
         y++;
-        c.gridx = 2;
+        c.gridx = 0;
         c.gridy = y;
+        trPanel.add(new JLabel("nwires_wi_ave <= ", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("nwires_wi_ave<=", JLabel.LEADING),c);
-        
         npassWires.setText("9");
         npassWires.addActionListener(this);
         tgmPanel.add(npassWires);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
         
-        //
         y++;
-        c.gridx = 2;
+        c.gridx = 0;
         c.gridy = y;
+        trPanel.add(new JLabel("deltaWire = ", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("deltaWire=", JLabel.LEADING),c);
-        
-        deltaWire.setText("3");
+        deltaWire.setText("9");
         deltaWire.addActionListener(this);
         tgmPanel.add(deltaWire);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
         
-         //
         y++;
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(new JLabel(" "),c);
+
         y++;
-        c.gridx = 2;
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(new JLabel("Options"),c);
+
+        y++;
+        c.gridx = 0;
         c.gridy = y;
+        trPanel.add(new JLabel("Variation", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("variation", JLabel.LEADING),c);
-        
         calVariation.addActionListener(this);
         tgmPanel.add(calVariation);
-        c.gridx = 3;
+        c.gridx = 1;
 	c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
         
-         //
+//        y++;
+//        c.gridx = 0;
+//        c.gridy = y;
+//        trPanel.add(new JLabel("distbeta", JLabel.LEADING),c);
+//        tgmPanel = new JPanel();
+//        distBetaFCN.addActionListener(this);
+//        tgmPanel.add(distBetaFCN);
+//        c.gridx = 1;
+//	c.gridy = y;
+//        trPanel.add(tgmPanel,c);
+        
         y++;
-        y++;
-        c.gridx = 2;
+        c.gridx = 0;
         c.gridy = y;
+        trPanel.add(new JLabel("Number of Events = ", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        trPanel.add(new JLabel("distbeta", JLabel.LEADING),c);
-        
-        distBetaFCN.addActionListener(this);
-        tgmPanel.add(distBetaFCN);
-        c.gridx = 3;
-	c.gridy = y;
-        trPanel.add(tgmPanel,c);
-        c.gridx = 2;
-        c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        
-        
-        //add number of events selection
-        y++;
-        c.gridx = 2;
-        c.gridy = y;
-        tgmPanel = new JPanel();
-        trPanel.add(new JLabel("number of events = ", JLabel.LEADING),c);
-        
         enternofevents.setText("-1");
         enternofevents.addActionListener(this);
         tgmPanel.add(enternofevents);
-        c.gridx = 3;
+        c.gridx = 1;
         c.gridy = y;
         trPanel.add(tgmPanel,c);
-        c.gridx = 2;
+
+        y++;
+        c.gridx = 0;
         c.gridy = y;
-        trPanel.add(new JLabel(""),c);
-        
+        trPanel.add(new JLabel("Sector = ", JLabel.LEADING),c);
+        tgmPanel = new JPanel();
+        sectorN.setText("-1");
+        sectorN.addActionListener(this);
+        tgmPanel.add(sectorN);
+        c.gridx = 1;
+        c.gridy = y;
+        trPanel.add(tgmPanel,c);
+        //---------------------------------------------------------------------
         
         JPanel butPage3 = new configButtonPanel(this, true, "Finish");
         trOuterPanel.add(butPage3, BorderLayout.SOUTH);

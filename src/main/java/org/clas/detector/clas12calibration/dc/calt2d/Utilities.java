@@ -5,26 +5,25 @@
  */
 package org.clas.detector.clas12calibration.dc.calt2d;
 
-import org.jlab.rec.dc.Constants;
+//import org.jlab.rec.dc.Constants;
 
 /**
  *
  * @author ziegler
  */
 public class Utilities {
-    public static boolean NEWDELTATBETAFCN = true;
     
-    public double calcDeltaTimeBeta(double x, double distbeta, double beta){
-        return (Math.sqrt(x * x + (distbeta * beta * beta) * 
-                (distbeta * beta * beta)) - x) / Constants.V0AVERAGED;
+    public double calcDeltaDocaBeta(double doca, double distbeta, double scale, double bbeta){
+        double beta=bbeta;
+        if(beta>1)
+            beta=1;
+        double delta_doca = scale*0.5 * (distbeta *beta*beta) *(distbeta *beta*beta) *(distbeta *beta*beta) * doca / 
+                ( (distbeta *beta*beta) *(distbeta *beta*beta)*(distbeta *beta*beta) + doca *doca *doca );
+        
+        return delta_doca;
     }
     
-    public double calcDeltaTimeBetaNewFCN(double t,double distbeta, double beta){
-        double ct = (distbeta/.0050)*beta*beta;
-        //see [CLAS-Note 96-008]
-        double tBeta = (0.5 *ct*ct*ct*t)/(ct*ct*ct+t*t*t);
-        return tBeta*beta*beta;
-    }
+    
     
     public double getReducedAngle(double alpha) {
         double ralpha = 0;
@@ -40,4 +39,16 @@ public class Utilities {
 
         return Math.toDegrees(ralpha);
     }  
+
+    public double getDeltaTimeBeta(double x, double beta, double distbeta, double v_0) {
+      
+        double dtbscl = 0.5*(x/Math.sqrt(x*x+T2DCalib.DBF)+1);
+       // dtbscl = 0.1;
+        double dtb0 =(Math.sqrt(x * x + (distbeta * beta * beta) * (distbeta* beta * beta)) - x) / v_0;
+       // double dtb0 =(Math.sqrt(x * x + (distbeta * beta * beta) * (distbeta* beta * beta)) - x) / Constants.V0AVERAGED;
+        double dtb = dtbscl*dtb0;
+        return dtb;
+    }
+    
+    
 }

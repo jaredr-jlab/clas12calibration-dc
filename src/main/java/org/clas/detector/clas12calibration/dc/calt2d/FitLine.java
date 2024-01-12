@@ -7,7 +7,6 @@ package org.clas.detector.clas12calibration.dc.calt2d;
 
 import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.groot.math.Func1D;
-import org.jlab.rec.dc.Constants;
 /**
  *
  * @author ziegler
@@ -52,11 +51,11 @@ public class FitLine extends Func1D{
             B = T2DCalib.BfieldValuesUpd[i-2][j][k];
         }
         //reduce the corrected angle
-        double ralpha = (double) util.getReducedAngle(alpha);
+        double ralpha = (double) util.getReducedAngle(alpha); 
         double v_0 = par[0];
         double vm = par[1];
         double tmax = par[3];
-        double distbeta = par[4]; 
+        double distbeta = par[4];
         double delBf = par[5]; 
         double Bb1 = par[6]; 
         double Bb2 = par[7]; 
@@ -64,18 +63,12 @@ public class FitLine extends Func1D{
         double Bb4 = par[9]; 
         double R = par[2];
         double dmax = par[10];
-        
-        double deltatime_beta = 0;
-        double time = 0;
+        double beta = T2DCalib.getBetaAve();
+        double deltatime_beta = util.getDeltaTimeBeta(x, beta, distbeta, v_0);
+
         calcTime = fc.polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
-            tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1) ;
-        if(Utilities.NEWDELTATBETAFCN==false) {
-            deltatime_beta = util.calcDeltaTimeBeta(x, distbeta, fc.beta);
-        } else {
-            deltatime_beta = util.calcDeltaTimeBetaNewFCN(calcTime, distbeta, fc.beta);
-        }
+            tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1)+ deltatime_beta ;
         
-        time = calcTime + deltatime_beta;
         //System.out.println("ijk "+i+""+j+""+k+" b "+(float)T2DCalib.BfieldValues[k]+" ralpha "+(float)ralpha+" x "+x+" time "+(float)calcTime);
         return calcTime;
     }

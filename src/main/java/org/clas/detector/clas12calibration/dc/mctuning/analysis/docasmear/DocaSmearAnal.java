@@ -36,6 +36,7 @@ import org.jlab.utils.groups.IndexedList;
 import org.jlab.utils.system.ClasUtilsFile;
 import org.clas.detector.clas12calibration.dc.mctuning.analysis.FitPanel;
 import org.clas.detector.clas12calibration.dc.mctuning.viewer.DocaSmearAnalViewer;
+import org.clas.detector.clas12calibration.viewer.Driver;
 import org.jlab.utils.groups.IndexedTable;
 /**
  *
@@ -406,7 +407,8 @@ public class DocaSmearAnal extends AnalysisMonitor{
         }
        
         if(count==1) {
-            Constants.getInstance().initialize("DCCAL");
+            //Constants.getInstance().initialize("DCCAL");
+            Driver.init();
             polarity = (int)Math.signum(event.getBank("RUN::config").getFloat("torus",0));
             runNumber = newRun;
             IndexedTable tab = DocaSmearAnalViewer.ccdb.getConstants(newRun, 

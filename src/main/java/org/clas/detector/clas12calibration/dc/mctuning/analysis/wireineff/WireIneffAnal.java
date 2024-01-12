@@ -19,6 +19,7 @@ import org.clas.detector.clas12calibration.dc.mctuning.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.mctuning.viewer.AnalysisMonitor;
 import org.clas.detector.clas12calibration.dc.mctuning.viewer.WireIneffAnalViewer;
 import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
+import org.clas.detector.clas12calibration.viewer.Driver;
 import org.freehep.math.minuit.FCNBase;
 import org.freehep.math.minuit.FunctionMinimum;
 import org.freehep.math.minuit.MnMigrad;
@@ -311,8 +312,9 @@ public class WireIneffAnal extends AnalysisMonitor{
         double tBeta = bnkHits.getFloat("tBeta", i);
         double resiTime = bnkHits.getFloat("timeResidual", i);
         double resiFit = bnkHits.getFloat("fitResidual", i);
+        int jitter = (int) bnkHits.getByte("jitter", i);
         
-        hit = new FittedHit(sector, superlayer, layer, wire, TDC, id);
+        hit = new FittedHit(sector, superlayer, layer, wire, TDC, jitter, id);
         hit.set_Id(id); // use event number as id to recompose the clusters
         hit.setB(B);
         hit.setT0(T0);
@@ -368,7 +370,8 @@ public class WireIneffAnal extends AnalysisMonitor{
         }
        
         if(count==1) {
-            Constants.getInstance().initialize("DCCAL");
+            //Constants.getInstance().initialize("DCCAL");
+            Driver.init();
             TableLoader.FillT0Tables(newRun, "default");
             TableLoader.Fill(ccdb.getConstants(newRun, Constants.TIME2DIST));  
             runNumber = newRun;

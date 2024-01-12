@@ -147,14 +147,26 @@ public class FitPanel {
                 }
             }
             int npar = 10;
-            panel = new JPanel(new GridLayout(npar+1, 6));            
+            panel = new JPanel(new GridLayout(npar+2, 6));            
+            for (int i = 0; i < 6; i++) {
+                String SuperLayer = Integer.toString(i + 1);
+                panel.add(new JLabel(""));
+                panel.add(new JLabel("Super Layer " + SuperLayer));
+            }
+            panel.add(new JLabel(""));
             fixFit = new JCheckBox[10][6];
             for (int i = 0; i < npar; i++) {  
                 JLabel l = new JLabel("      "+parNames[i], JLabel.LEADING);
                 panel.add(l);
                 for (int j = 0; j < 6; j++) {
                     fixFit[i][j] = new JCheckBox("Fix");
-                    if(i==2 || i>4) {
+                    // aa is true for parameters "R", "distbeta", "b1", "b2", "b3", and "b4"
+                    boolean aa = i==2 || i==4 || i>5;
+                    // bb is true for parameter "tmax" on superlayers 3 and 4 only
+                    boolean bb = i==3 && j==6; //(j==2 || j==3);
+                    // cc is true for parameter "delBf" on superlayers 1, 2, 5, and 6 only
+                    boolean cc = i==5; // && (j==0 || j==1 || j==4 || j==5);
+                    if(aa || bb || cc) {
                         fixFit[i][j].setSelected(true);
                     } else {
                         fixFit[i][j].setSelected(false);
@@ -176,8 +188,11 @@ public class FitPanel {
             panel.add(new JLabel("    Fit range max"));
             maxRange.setText(Double.toString(2.0));
             panel.add(maxRange);
-            
-            resetButton = new JButton("RESET");
+
+            JPanel buttonsPanel = new JPanel();
+            buttonsPanel.setLayout(new GridLayout(1, 4));
+
+            resetButton = new JButton("RESET PARAMETERS");
             resetButton.setUI(new MetalButtonUI());
             resetButton.setBackground(Color.CYAN);
             resetButton.setContentAreaFilled(false);
@@ -189,9 +204,8 @@ public class FitPanel {
                     return;
                 }
             });
-            panel.add(resetButton);
             
-            resButton = new JButton("RESI");
+            resButton = new JButton("PLOT RESIDUALS");
             resButton.setUI(new MetalButtonUI());
             resButton.setBackground(Color.YELLOW);
             resButton.setContentAreaFilled(false);
@@ -203,9 +217,8 @@ public class FitPanel {
                     return;
                 }
             });
-            panel.add(resButton);
             
-            reCookButton = new JButton("RECOOK");
+            reCookButton = new JButton("REDO SEGMENT FITS");
             reCookButton.setUI(new MetalButtonUI());
             reCookButton.setBackground(Color.ORANGE);
             reCookButton.setContentAreaFilled(false);
@@ -226,9 +239,8 @@ public class FitPanel {
                     return;
                 }
             });
-            panel.add(reCookButton);
             
-            fitButton = new JButton("FIT");
+            fitButton = new JButton("FIT TIME TO DISTANCE");
             fitButton.setUI(new MetalButtonUI());
             fitButton.setBackground(Color.RED);
             fitButton.setContentAreaFilled(false);
@@ -244,9 +256,14 @@ public class FitPanel {
                     return;
                 }
             });
-            
+
+            buttonsPanel.add(fitButton);
+            buttonsPanel.add(reCookButton);
+            buttonsPanel.add(resButton);
+            buttonsPanel.add(resetButton);
+
             this.add(panel, BorderLayout.CENTER);
-            this.add(fitButton, BorderLayout.PAGE_END);
+            this.add(buttonsPanel, BorderLayout.PAGE_END);
             
             
             label = new JLabel("Click the \"Show it!\" button"

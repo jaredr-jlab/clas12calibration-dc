@@ -9,7 +9,6 @@ import java.util.Map;
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.freehep.math.minuit.FCNBase;
 import org.jlab.groot.data.GraphErrors;
-import org.jlab.rec.dc.Constants;
 
 /**
  *
@@ -33,7 +32,7 @@ public class FitFunction implements FCNBase{
     }
          
     public double eval(double x, double ralpha, double B, double[] par) {
-        
+        double beta = T2DCalib.getBetaAve();
         double v_0 = par[0];
         double vm = par[1];
         double tmax = par[3];
@@ -45,22 +44,16 @@ public class FitFunction implements FCNBase{
         double Bb4 = par[9]; 
         double R = par[2];
         double dmax = par[10];
+        double deltatime_beta = util.getDeltaTimeBeta(x,beta,distbeta,v_0);
+
         
-        double deltatime_beta = 0;
-        double time = 0;
-        double calcTime = this.polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
-            tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1) ;
-        if(Utilities.NEWDELTATBETAFCN==false) {
-            deltatime_beta = util.calcDeltaTimeBeta(x, distbeta, beta);
-        } else {
-            deltatime_beta = util.calcDeltaTimeBetaNewFCN(calcTime, distbeta, beta);
-        }
+        double calcTime = polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
+            tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1) + deltatime_beta ;
         
-        time = calcTime + deltatime_beta;
-        
-        return time;
+        return calcTime;
     }
-    public double polyFcnMac(double x, double alpha, double bfield, double v_0, double vm, double R, 
+    
+    public static double polyFcnMac(double x, double alpha, double bfield, double v_0, double vm, double R, 
             double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4, int superlayer) {
         
         if(x>dmax)
@@ -147,7 +140,6 @@ public class FitFunction implements FCNBase{
             }
         }
         return chisq;
-        
     }
     
 }

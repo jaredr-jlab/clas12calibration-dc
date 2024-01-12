@@ -12,6 +12,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,15 +22,44 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.plaf.metal.MetalButtonUI;
+import org.jlab.rec.dc.Constants;
 
 /**
  *
  * @author ziegler
  */
 public class Driver {
-    
-      
+   
+    public static void init() {
+
+        Constants.getInstance().initialize("DCCAL");
+        Constants.getInstance().setENDPLATESBOWING(true);
+        Constants.getInstance().setBETACUT(true);
+        Constants.getInstance().setGEOVARIATION("default");
+        Constants.getInstance().setUSETIMETBETA(true);
+        Constants.getInstance().setT2D(1);
+    }
     public static void main(String[] args) throws FileNotFoundException {
+        File file
+            = new File("TestCalOutPut.hipo");
+ 
+        if (file.delete()) {
+            System.out.println("File TestCalOutPut.hipo deleted successfully");
+        }
+        else {
+            System.out.println("Failed to delete file TestCalOutPut.hipo");
+        }
+        
+        file
+            = new File("TestOutPut.hipo");
+ 
+        if (file.delete()) {
+            System.out.println("File TestOutPut.hipo deleted successfully");
+        }
+        else {
+            System.out.println("Failed to delete file TestOutPut.hipo");
+        }
+    
         JFrame    frame    = new JFrame();
         JButton   T2DButton = null;
         JButton   T0Button = null;

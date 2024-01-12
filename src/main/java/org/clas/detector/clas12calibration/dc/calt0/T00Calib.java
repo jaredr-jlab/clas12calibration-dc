@@ -11,7 +11,6 @@ import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +19,7 @@ import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.calt2d.SegmentProperty;
 import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.AnalysisMonitor;
+import org.clas.detector.clas12calibration.viewer.Driver;
 import org.clas.detector.clas12calibration.viewer.T0Viewer;
 import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.groot.data.H1F;
@@ -27,7 +27,6 @@ import org.jlab.groot.group.DataGroup;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent; 
 import org.jlab.detector.calib.utils.ConstantsManager;
-import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.fitter.DataFitter;
 import org.jlab.groot.math.F1D;
 import org.jlab.io.hipo.HipoDataSource;
@@ -48,7 +47,7 @@ public class T00Calib extends AnalysisMonitor{
     File outfile = null;
     private int runNumber;
     private String analTabs = "Fully Corrected Time";
-    private Utilities util = new Utilities();
+    //private Utilities util = new Utilities();
    
     public T00Calib(String name, ConstantsManager ccdb) throws FileNotFoundException {
         super(name, ccdb);
@@ -72,7 +71,6 @@ public class T00Calib extends AnalysisMonitor{
         //hipoEvent = (HipoDataEvent) writer.createEvent();
         //writer.open("TestOutPut.hipo");
         //writer.writeEvent(hipoEvent);
-        Utilities.NEWDELTATBETAFCN = true;
 
         
     }
@@ -107,7 +105,6 @@ public class T00Calib extends AnalysisMonitor{
         DataGroup hgrps = new DataGroup();
         String hNm;
         String hTtl;
-        int ijk=-1;
         for (int i = 0; i < nsec; i++)
         {
             for (int j = 0; j < nsl; j++)
@@ -220,16 +217,19 @@ public class T00Calib extends AnalysisMonitor{
     public List<FittedHit> hits = new ArrayList<>();
     Map<Integer, ArrayList<Integer>> segMapTBHits = new HashMap<Integer, ArrayList<Integer>>();
     Map<Integer, SegmentProperty> segPropMap = new HashMap<Integer, SegmentProperty>();
-    //List<FittedHit> hitlist = new ArrayList<>();
-    private ReadTT cableMap = new ReadTT();
     @Override
     public void processEvent(DataEvent event) {
         
         if (!event.hasBank("RUN::config")) {
             return ;
         }
+
+        if (!event.hasBank("REC::Particle")) {
+            return ;
+        }
         
         DataBank bank = event.getBank("RUN::config");
+        DataBank bank2 = event.getBank("REC::Particle");
         int newRun = bank.getInt("run", 0);
         if (newRun == 0) {
            return ;
@@ -238,7 +238,8 @@ public class T00Calib extends AnalysisMonitor{
         }
         
         if(count==1) {
-            Constants.getInstance().initialize("DCCAL");
+            //Constants.getInstance().initialize("DCCAL");
+            Driver.init();
             TableLoader.FillT0Tables(newRun, "default");
 
             TableLoader.Fill(T0Viewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/time2dist"));  
@@ -260,27 +261,28 @@ public class T00Calib extends AnalysisMonitor{
             double time = (double) bnkHits.getFloat("time", j);
             double calibtime = time + bnkHits.getFloat("tBeta",j); //time without tbeta correction
             //tbeta correction function is in Utilities.java named calcDeltaTimeBetaNew(calibtime,distbeta,beta);
-            double beta = bnkHits.getFloat("beta",j);
+            //double beta = bnkHits.getFloat("beta",j);
             //distbeta is from ccdb for superlayer and sector 
-            double distbeta = TableLoader.distbeta[sec-1][sl-1];
+            //double distbeta = TableLoader.distbeta[sec-1][sl-1];
            //scale factor on how much of the new beta correction should be applied. values should be from 0 to 1
-            double tbetascalefactor = 1; 
+            //double tbetascalefactor = 0; 
             //calculate tbeta correction
-            double newtbetacorr = tbetascalefactor*util.calcDeltaTimeBetaNewFCN(calibtime, distbeta, beta);            
+            //double newtbetacorr = tbetascalefactor*util.calcDeltaTimeBetaNewFCN(calibtime, distbeta, beta);            
            //apply tbeta correction
-            double timecorrected = calibtime - newtbetacorr;
+            //double timecorrected = calibtime - newtbetacorr;
             //debug output
            // System.out.println("Sector " + sec + " sl " + sl + " distbeta is " + distbeta);
            // System.out.println("time " + time + " calibtime " + calibtime + " calib-newtbeta " + timecorrected + " tbetafromfile " + bnkHits.getFloat("tBeta",j) + " tbetarecal " + newtbetacorr);
             int trkID = bnkHits.getByte("trkID", j);
-            if(trkID!=-1) {
-                 int pid = this.readPID(event, trkID);            
+            if(trkID!=-1 && 11 == bank2.getInt("pid", 0)) {
+                 //int pid = this.readPID(event, trkID);            
             	 //pid 11 is electron, 2212 proton and 211 pion
                 //pass if the track is identified as an electron or as a hadron
-                 if(pid==11) {
+                 //if(pid==11) {
                 	 this.TDCHis.get(new Coordinate(sec-1, sl-1))
-                     .fill(timecorrected);
-                 }
+                     //.fill(timecorrected);
+                     .fill(calibtime);
+                 //}
                 }
             }
         } 
@@ -335,135 +337,50 @@ public class T00Calib extends AnalysisMonitor{
         return pass;
     }
 
-    private double getThreshold(H1F h) {
-        // find the bin at which the integral corresponds to 1% of the full integral to max 
-        // this is the max range to obtain a threshold from a flat line fit
-        double integral = 0;
-        double partintegral = 0;
-        
-        GraphErrors gr = new GraphErrors(); 
-        for (int ix =0; ix< h.getMaximumBin(); ix++) {
-            integral+= h.getBinContent(ix);
-        }
-        double x = 0;
-        for (int ix =0; ix< h.getMaximumBin(); ix++) {
-            x = h.getDataX(ix);
-            double y = h.getBinContent(ix);
-            double err = h.getBinError(ix);
-            if(err<1) {
-                err = 1.4142;
-            }
-            // fill graph
-            gr.addPoint(x, y, 0, err);
-            partintegral += h.getBinContent(ix);
-            
-            if(partintegral>0.5*integral)
-                break;
-        }
-        // fit the graph 
-        F1D f0 = new F1D("f0","[p0]", h.getDataX(0), x);
-        f0.setParameter(0, 0);
-        DataFitter.fit(f0, gr, "Q"); 
-        return f0.getParameter(0);
-    }
     private double[] getT0(int i, int j) {
         System.out.println("Getting t0 for i,j = "+i+" "+j);
         H1F h = this.TDCHis.get(new Coordinate(i,j));
         
-        double thres = 0;//this.getThreshold(h);
         double [] T0val = new double[2];
-        F1D f1 = new F1D("f1","[a]*x+[b]", h.getDataX(0), h.getDataX(20));
-        
+
         F1D gausFunc = new F1D("gausFunc", "[amp]*gaus(x,[mean],[sigma])+[p0]", 
                 h.getDataX(0), h.getDataX(h.getMaximumBin())); 
-        
+
         gausFunc.setParameter(0, h.getMax());
         gausFunc.setParameter(1, h.getDataX(h.getMaximumBin()));
         gausFunc.setParameter(2, 25);
         gausFunc.setParameter(3, 0);
+                
+        DataFitter.fit(gausFunc, h, "Q");
         
-        DataFitter.fit(gausFunc, h, "Q"); 
+        F1D erfcFunc = new F1D("erfcFunc", "[amp]*erf(-x, -[mean], [sigma])+[p0]", 
+                        h.getDataX(0), h.getDataX(h.getMaximumBin()));
+                
+        erfcFunc.setParameter(0, gausFunc.getParameter(0));
+        erfcFunc.setParameter(1, gausFunc.getParameter(1));
+        erfcFunc.setParameter(2, gausFunc.getParameter(2));
+        erfcFunc.setParameter(3, gausFunc.getParameter(3));
         
-        double tmidY = gausFunc.getParameter(0)/2;
-        double tminY = gausFunc.getParameter(3);
-        double del_min_halfmaxY = tmidY-tminY;
-        
-        double minRangeY = tmidY-del_min_halfmaxY/2;
-        double maxRangeY = tmidY;
-        if(h.getMax()>tmidY && tmidY+(h.getMax()-tmidY)/3 < h.getMax() ) {
-            maxRangeY+=(h.getMax()-tmidY)/3;
-        }
-        
-        System.out.println(" minRangeY "+minRangeY+" maxRangeY "+maxRangeY);
-        
-        f1.setParameter(0, 0);
-        f1.setParameter(1, 0);
+        DataFitter.fit(erfcFunc, h, "Q");
 
-        GraphErrors gr = new GraphErrors(); 
-        
-        int t0idx  = -1;
-        int t0midx = -1;
-        double t0 = Double.NEGATIVE_INFINITY; 
-        for (int ix =0; ix< h.getMaximumBin(); ix++) {
-            if(h.getBinContent(ix)>=maxRangeY) {
-                t0midx= ix;
-                break;
-            }
-        }
-        for (int ix =0; ix< h.getMaximumBin(); ix++) {
-            if(h.getBinContent(ix)>=minRangeY) {
-                t0idx= ix;
-                break;
-            }
-        }
-        int diffBins = t0midx - t0idx;
-        System.out.println("diffBins "+diffBins);
-//        for (int ix =0; ix< h.getMaximumBin(); ix++) {
-//            if(h.getBinContent(ix) >thres 
-//                        && t0 == Double.NEGATIVE_INFINITY) {
-//                    t0 = h.getDataX(ix);
-//                    t0idx = ix;
-//                break;
-//            }
-//        }
-        for (int ix =t0idx; ix< t0midx; ix++) {
-            gr.addPoint(h.getDataX(ix), h.getBinContent(ix), 0, h.getBinError(ix));
-        }
-        
-        if(gr.getDataSize(0)>1) {
-            f1.setRange(h.getDataX(t0idx), h.getDataX(t0midx));
-            DataFitter.fit(f1, gr, "Q"); 
-        }
-        
-        double n = tminY-f1.getParameter(1);
-        double d = f1.getParameter(0);
-        double en = -f1.parameter(1).error();
-        double ed = f1.parameter(0).error();
-        double T0 = n/d;
-        double T0Err = this.calcError(n, en, d, ed);
+        double T0 = erfcFunc.getParameter(1)-1.5*erfcFunc.getParameter(2);
+        double T0Err = Math.sqrt(erfcFunc.parameter(1).error()*erfcFunc.parameter(1).error()+erfcFunc.parameter(2).error()*erfcFunc.parameter(2).error());
         if(Double.isNaN(T0)|| Double.isNaN(T0Err)){
             T0 = 0;
             T0Err = 1.42;
         }
         T0val[1] =T0Err;
         T0val[0] = T0;
+
         h.setOptStat(0);
         String t = "T00 = "+(float)T0;
         h.setTitle(t);
         T0s.put(new Coordinate(i,j), T0);
-        //this.updateTable(i, j, T0);
-        TDCFits.put(new Coordinate(i,j), 
-                new FitLine("f"+""+i+""+j, i, j, 
-                T0, h.getDataX(t0midx+diffBins/2)) );
-        TDCFits.get(new Coordinate(i,j)).setLineStyle(4);
-        TDCFits.get(new Coordinate(i,j)).setLineWidth(2);
-        TDCFits.get(new Coordinate(i,j)).setLineColor(6);
-        TDCFits.get(new Coordinate(i,j)).setParameters(new double[] {f1.getParameter(0), f1.getParameter(1)});
         
         return T0val;
     }
     
-    private int readPID(DataEvent event, int trkId) {
+    /*private int readPID(DataEvent event, int trkId) {
         int pid = 0;
         //fetch the track associated pid from the REC tracking bank
         if (!event.hasBank("REC::Particle") || !event.hasBank("REC::Track"))
@@ -482,10 +399,5 @@ public class T00Calib extends AnalysisMonitor{
         }
         
         return pid;
-    } 
-
-    private double calcError(double n, double en, double d, double ed) {
-        return Math.sqrt((en/d)*(en/d)+(ed*n/(d*d))*(ed*n/(d*d)));
-    }
+    } */
 }
-
