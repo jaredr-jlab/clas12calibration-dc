@@ -627,7 +627,7 @@ public class T2DCalib extends AnalysisMonitor{
                 rf.reFit(calhits, false);    //use all hits
                 for(FittedHit hit : calhits) {
                     //filling the timeResi for the newly calibrated hits
-                    timeResiNew.get(new Coordinate(hit.get_Superlayer()-1)).fill(hit.get_TimeResidual());
+                        timeResiNew.get(new Coordinate(hit.get_Superlayer()-1)).fill(hit.get_TimeResidual());
                     
                 }
             }
@@ -1466,9 +1466,11 @@ public class T2DCalib extends AnalysisMonitor{
         double A1=a1/(a1+a2);
         double A2=a2/(a1+a2);
         
+        double value = Math.sqrt(A1*sig12+A2*sig22);
+        if(sig_1<sig_2 && value < sig_1) value = sig_1;
+        if(sig_2<sig_1 && value < sig_2) value = sig_2;
         
-        
-        return Math.sqrt(a1*sig12+a2*sig22)/(a1+a2);
+        return value;
     }
 
     private boolean passPID(DataEvent event, DataBank bnkHits, int rowIdxinTrkBank) {
