@@ -85,22 +85,35 @@ public class TDCCuts extends AnalysisMonitor {
             
             runNumber = newRun; 
         }
-        if(!event.hasBank("DC::tdc")) {
-            return;
-        } 
-        // get segment property
         
-        DataBank bnkHits = event.getBank("DC::tdc");
-        
-        for (int j = 0; j < bnkHits.rows(); j++) {
-            
-            int sec = bnkHits.getInt("sector", j);
-            int sl = (bnkHits.getInt("layer", j) - 1)/6 + 1;// layer goes from 1 to 36 in data
-            int tdc = bnkHits.getInt("TDC", j);// wire goes from 1 to 112 in data
-            
-                this.TDCHis.get(new Coordinate(sec-1, sl-1))
-                    .fill((float)tdc);
-        } 
+        // get hits property
+        if(event.hasBank("DC::tdc") && !(event.hasBank("TimeBasedTrkg::TBHits") )
+                && !(event.hasBank("HitBasedTrkg::HBHits") )) {
+            DataBank bnkHits = event.getBank("DC::tdc");
+
+            for (int j = 0; j < bnkHits.rows(); j++) {
+
+                int sec = bnkHits.getInt("sector", j);
+                int sl = (bnkHits.getInt("layer", j) - 1)/6 + 1;// layer goes from 1 to 36 in data
+                int tdc = bnkHits.getInt("TDC", j);// wire goes from 1 to 112 in data
+
+                    this.TDCHis.get(new Coordinate(sec-1, sl-1))
+                        .fill((float)tdc);
+            } 
+        }
+        if(event.hasBank("TimeBasedTrkg::TBHits")) {
+            DataBank bnkHits = event.getBank("TimeBasedTrkg::TBHits");
+
+            for (int j = 0; j < bnkHits.rows(); j++) {
+
+                int sec = bnkHits.getInt("sector", j);
+                int sl = bnkHits.getInt("superlayer", j);// layer goes from 1 to 36 in data
+                int tdc = bnkHits.getInt("TDC", j);// wire goes from 1 to 112 in data
+
+                    this.TDCHis.get(new Coordinate(sec-1, sl-1))
+                        .fill((float)tdc);
+            } 
+        }
     }
     
     public void Plot(int i , int j) {
