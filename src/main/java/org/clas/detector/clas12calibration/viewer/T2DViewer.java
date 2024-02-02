@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 package org.clas.detector.clas12calibration.viewer;
-
+import org.jlab.logging.DefaultLogger;
 import java.awt.BorderLayout;
 import java.awt.Dialog;
 import java.awt.GridBagConstraints;
@@ -102,6 +102,7 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
     public static JTextField nWires = new JTextField(3);
     public static JTextField deltaWire = new JTextField(3);
     public static JTextField pid = new JTextField(3);
+    public static JTextField usePressureTerm = new JTextField(3);
     public static JTextField enternofevents = new JTextField(3); 
     public static JTextField sectorN = new JTextField(3); 
     
@@ -202,8 +203,10 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         this.setCanvasUpdate(canvasUpdateTime);
         // init constants manager
         ccdb.init(Arrays.asList(new String[]{
-            "/geometry/dc/superlayer/wpdist",
-            "/calibration/dc/time_to_distance/time2dist",
+            "/geometry/dc/superlayer",
+            "/calibration/dc/time_to_distance/t2d_pressure", 
+            "/hall/weather/pressure",
+            "/calibration/dc/time_to_distance/ref_pressure",
             "/calibration/dc/time_jitter"}));
         //ccdb.setVariation("default");
         ConstantProvider provider = GeometryFactory.getConstants(DetectorType.DC, 11, "default");
@@ -646,6 +649,18 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         trPanel.add(tgmPanel,c);
         
         y++;
+        c.gridx = 0;
+        c.gridy = y;
+        trPanel.add(new JLabel("usePressureTerm = ", JLabel.LEADING),c);
+        tgmPanel = new JPanel();
+        usePressureTerm.setText("false");
+        usePressureTerm.addActionListener(this);
+        tgmPanel.add(usePressureTerm);
+        c.gridx = 1;
+	c.gridy = y;
+        trPanel.add(tgmPanel,c);
+        
+        y++;
         c.gridx = 1;
 	c.gridy = y;
         trPanel.add(new JLabel(" "),c);
@@ -723,6 +738,7 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         frame.setSize(1400, 800);
         frame.setVisible(true);
         viewer.configFrame.setModalityType(Dialog.ModalityType.APPLICATION_MODAL);
+        DefaultLogger.debug();
 	viewer.configure();
 
     }
