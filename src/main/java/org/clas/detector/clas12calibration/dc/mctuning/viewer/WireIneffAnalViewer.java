@@ -58,7 +58,6 @@ import org.jlab.io.base.DataEventType;
 import org.jlab.io.task.DataSourceProcessorPane;
 import org.jlab.io.task.IDataEventListener;
 import org.jlab.rec.dc.Constants;
-import org.jlab.service.dc.LayerEfficiencyAnalyzer;
 /**
  *
  * @author ziegler
@@ -179,7 +178,9 @@ public class WireIneffAnalViewer implements IDataEventListener, DetectorListener
         // init constants manager
         ccdb.init(Arrays.asList(new String[]{
             "/geometry/dc/superlayer/wpdist",
-            "/calibration/dc/time_to_distance/time2dist",
+            "/calibration/dc/time_to_distance/t2d_pressure", 
+            "/hall/weather/pressure",
+            "/calibration/dc/time_to_distance/ref_pressure",
             "/calibration/dc/time_jitter"}));
         ccdb.setVariation("default");
         ConstantProvider provider = GeometryFactory.getConstants(DetectorType.DC, 11, "default");
