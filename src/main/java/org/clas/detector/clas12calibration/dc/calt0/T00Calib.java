@@ -4,7 +4,6 @@
  * and open the template in the editor.
  */
 package org.clas.detector.clas12calibration.dc.calt0;
-import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -17,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.calt2d.SegmentProperty;
-import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
+import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
+import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
 import org.clas.detector.clas12calibration.viewer.AnalysisMonitor;
 import org.clas.detector.clas12calibration.viewer.Driver;
 import org.clas.detector.clas12calibration.viewer.T0Viewer;
+import org.clas.detector.clas12calibration.viewer.T2DViewer;
 import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.group.DataGroup;
@@ -241,8 +242,9 @@ public class T00Calib extends AnalysisMonitor{
             //Constants.getInstance().initialize("DCCAL");
             Driver.init();
             TableLoader.FillT0Tables(newRun, "default");
-
-            TableLoader.Fill(T0Viewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/time2dist"));  
+            TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"));  
             ReadTT.Load(newRun, "default"); 
             runNumber = newRun; 
         }
