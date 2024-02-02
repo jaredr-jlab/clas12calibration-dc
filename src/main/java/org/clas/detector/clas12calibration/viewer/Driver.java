@@ -22,6 +22,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.plaf.metal.MetalButtonUI;
+import org.jlab.logging.DefaultLogger;
 import org.jlab.rec.dc.Constants;
 
 /**
@@ -160,7 +161,7 @@ public class Driver {
         
         frame.add(panel, BorderLayout.PAGE_END);
         //frame.add(T2DButton, BorderLayout.PAGE_END);
-        
+        DefaultLogger.initialize();
 
     }
 }
