@@ -20,6 +20,7 @@ import org.clas.detector.clas12calibration.dc.mctuning.viewer.AnalysisMonitor;
 import org.clas.detector.clas12calibration.dc.mctuning.viewer.WireIneffAnalViewer;
 import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
 import org.clas.detector.clas12calibration.viewer.Driver;
+import org.clas.detector.clas12calibration.viewer.T2DViewer;
 import org.freehep.math.minuit.FCNBase;
 import org.freehep.math.minuit.FunctionMinimum;
 import org.freehep.math.minuit.MnMigrad;
@@ -372,8 +373,9 @@ public class WireIneffAnal extends AnalysisMonitor{
         if(count==1) {
             //Constants.getInstance().initialize("DCCAL");
             Driver.init();
-            TableLoader.FillT0Tables(newRun, "default");
-            TableLoader.Fill(ccdb.getConstants(newRun, Constants.TIME2DIST));  
+            TableLoader.FillT0Tables(newRun, "default");TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"));  
             runNumber = newRun;
         }
         if(!event.hasBank("TimeBasedTrkg::TBHits")) {
