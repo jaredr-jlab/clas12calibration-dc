@@ -15,11 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-//import javax.sound.sampled.DataLine;
-
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
-import static org.clas.detector.clas12calibration.dc.calt0.ReadTT.t0min;
 import org.clas.detector.clas12calibration.dc.calt2d.SegmentProperty;
 import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.AnalysisMonitor;
@@ -34,16 +30,13 @@ import org.jlab.groot.fitter.DataFitter;
 import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.groot.data.DataVector;
 import org.jlab.groot.math.F1D;
-import org.jlab.groot.math.Func1D;
 import org.jlab.io.hipo.HipoDataSource;
 import org.jlab.jnp.hipo4.data.SchemaFactory;
-import org.jlab.rec.dc.Constants;
 import org.jlab.rec.dc.hit.FittedHit;
 import org.jlab.utils.groups.IndexedList;
 import org.jlab.utils.system.ClasUtilsFile;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import org.clas.detector.clas12calibration.viewer.Driver;
 import org.jlab.groot.data.DataLine;
