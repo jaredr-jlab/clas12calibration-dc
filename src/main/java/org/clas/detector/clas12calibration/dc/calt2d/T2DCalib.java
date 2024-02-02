@@ -4,8 +4,6 @@
  * and open the template in the editor.
  */
 package org.clas.detector.clas12calibration.dc.calt2d;
-import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
-import org.clas.detector.clas12calibration.dc.t2d.TableLoaderExtended;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -19,9 +17,9 @@ import java.util.List;
 import java.util.Map;
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.analysis.FitPanel;
-import static org.clas.detector.clas12calibration.dc.t2d.TableLoaderExtended.calc_Time;
+import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
+import static org.clas.detector.clas12calibration.dc.t2d.TableLoader.calc_Time;
 import org.clas.detector.clas12calibration.dc.t2d.TimeToDistanceEstimator;
-import org.clas.detector.clas12calibration.dc.t2d.TimeToDistanceEstimatorExtended;
 import org.clas.detector.clas12calibration.viewer.AnalysisMonitor;
 import org.clas.detector.clas12calibration.viewer.Driver;
 import org.clas.detector.clas12calibration.viewer.T2DViewer;
@@ -40,6 +38,7 @@ import org.jlab.groot.math.F1D;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent; 
 import org.jlab.detector.calib.utils.ConstantsManager;
+import org.jlab.groot.data.DataLine;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.groot.ui.TCanvas;
@@ -57,7 +56,7 @@ import org.jlab.utils.system.ClasUtilsFile;
  */
 public class T2DCalib extends AnalysisMonitor{
 
-    private static double DeltaTimeCut = 10;
+    private static double DeltaTimeCut = 20;
     public HipoDataSync calwriter = null;
     public HipoDataSync writer = null;
     private HipoDataEvent calhipoEvent = null;
@@ -71,11 +70,10 @@ public class T2DCalib extends AnalysisMonitor{
     private Utilities util = new Utilities();
     private int numberprocessedevents;
     private static double betaAve = 1;
-    public static double DBF =0.025; //factor in distbeta function (util class)
-    public static boolean t2DTbBeta = true;
+    
     public T2DCalib(String name, ConstantsManager ccdb) throws FileNotFoundException {
         super(name, ccdb);
-        this.setAnalysisTabNames("TrackDoca vs T","TrackDoca vs T Graphs","CalcDoca vs T","Time Residuals","Parameters");
+        this.setAnalysisTabNames("TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi", "CalcDoca vs T","Time Residuals","Parameters");
         this.init(false, "v0:vmid:R:tmax:distbeta:delBf:b1:b2:b3:b4");
         
         String dir = ClasUtilsFile.getResourceDir("CLAS12DIR", "etc/bankdefs/hipo4");
@@ -137,6 +135,7 @@ public class T2DCalib extends AnalysisMonitor{
         this.setNumberOfEvents(0);
         DataGroup td = new DataGroup(7,2);
         DataGroup tdp = new DataGroup(14,8);
+        DataGroup tdp2 = new DataGroup(14,8);
         DataGroup cd = new DataGroup(7,2);
         DataGroup tr = new DataGroup(6,1);
         DataGroup fr = new DataGroup(6,1);
@@ -242,7 +241,7 @@ public class T2DCalib extends AnalysisMonitor{
     }    
     @Override
     public void plotHistos() {
-        String[] Names = {"TrackDoca vs T","TrackDoca vs T Graphs","CalcDoca vs T","Time Residuals","Parameters"};
+        String[] Names = {"TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi","CalcDoca vs T","Time Residuals","Parameters"};
         for(int s = 0; s<3; s++) {
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridX(false);
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridY(false);
@@ -253,15 +252,16 @@ public class T2DCalib extends AnalysisMonitor{
             }
         }
         
-        for(int s = 3; s<5; s++) {
+        for(int s = 3; s<6; s++) {
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridX(false);
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridY(false);
         }
-        this.getAnalysisCanvas().getCanvas(Names[3]).divide(this.nsl, 2);
-        this.getAnalysisCanvas().getCanvas(Names[4]).divide(6, 6);
+        this.getAnalysisCanvas().getCanvas(Names[4]).divide(this.nsl, 2);
+        this.getAnalysisCanvas().getCanvas(Names[5]).divide(6, 6);
         
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").update();
+        this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").update();
         this.getAnalysisCanvas().getCanvas("CalcDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("Time Residuals").update();
         this.getAnalysisCanvas().getCanvas("Parameters").update();
@@ -356,7 +356,7 @@ public class T2DCalib extends AnalysisMonitor{
                             TvstrkdocasFits.get(new Coordinate(i, j, BBins)).setLineWidth(5);
                             TvstrkdocasFits.get(new Coordinate(i, j, BBins)).setLineColor(8);
                         } else {
-                            this.resetTable(i,j);
+                            //this.resetTable(i,j);
                         }
 
                     } else {
@@ -369,7 +369,7 @@ public class T2DCalib extends AnalysisMonitor{
                                 TvstrkdocasFits.get(new Coordinate(i, j, k)).setLineWidth(5);
                                 TvstrkdocasFits.get(new Coordinate(i, j, k)).setLineColor(k+1);
                             } else {
-                                this.resetTable(i,j);
+                                //this.resetTable(i,j);
                             }
                         }
                     }
@@ -512,7 +512,7 @@ public class T2DCalib extends AnalysisMonitor{
     private int iterationNum = 0;
     public  HipoDataSource calreader = new HipoDataSource();
     public  HipoDataSource reader = new HipoDataSource();
-    private TimeToDistanceEstimatorExtended t2d = new TimeToDistanceEstimatorExtended();
+    private TimeToDistanceEstimator t2d = new TimeToDistanceEstimator();
     public void reCook() {
         iterationNum++;
         fp.setRedFitButton();
@@ -823,8 +823,7 @@ public class T2DCalib extends AnalysisMonitor{
         } else {
            count++;
         }
-        
-        
+         
         //if(count>20000) return;
         if(count==1) {
             //Constants.getInstance().initialize("DCCAL");
@@ -832,13 +831,11 @@ public class T2DCalib extends AnalysisMonitor{
             String newVar = String.valueOf(T2DViewer.calVariation.getSelectedItem());
             System.out.println("* VARIATION *"+newVar);
             ccdb.setVariation(newVar);
-            if(t2DTbBeta) {
-                TableLoaderExtended.FillT0Tables(newRun, newVar);
-                TableLoaderExtended.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/time2dist"));  
-            } else {
-                TableLoader.FillT0Tables(newRun, newVar);
-                TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/time2dist")); 
-            }
+            TableLoader.FillT0Tables(newRun, newVar);
+            TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
+                    T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"));  
+            
             this.loadFitPars(); 
             polarity = (int)Math.signum(event.getBank("RUN::config").getFloat("torus",0));
             runNumber = newRun;
@@ -965,31 +962,19 @@ public class T2DCalib extends AnalysisMonitor{
             double[] pars = new double[11];
             //T2DFunctions.polyFcnMac(x, alpha, bfield, v0[s][r], vmid[s][r], FracDmaxAtMinVel[s][r], 
             //tmax, dmax, delBf, Bb1, Bb2, Bb3, Bb4, superlayer) ;
-            if(t2DTbBeta) {
-                pars[0] = TableLoaderExtended.v0[0][i];
-                pars[1] = TableLoaderExtended.vmid[0][i];
-                pars[2] = TableLoaderExtended.FracDmaxAtMinVel[0][i];
-                pars[3] = TableLoaderExtended.Tmax[0][i];
-                pars[4] = TableLoaderExtended.distbeta[0][i];
-                pars[5] = TableLoaderExtended.delta_bfield_coefficient[0][i];
-                pars[6] = TableLoaderExtended.b1[0][i];
-                pars[7] = TableLoaderExtended.b2[0][i];
-                pars[8] = TableLoaderExtended.b3[0][i];
-                pars[9] = TableLoaderExtended.b4[0][i];
-                pars[10] = 2.*Constants.getInstance().wpdist[i];//fix dmax
-            } else {
-                pars[0] = TableLoader.v0[0][i];
-                pars[1] = TableLoader.vmid[0][i];
-                pars[2] = TableLoader.FracDmaxAtMinVel[0][i];
-                pars[3] = TableLoader.Tmax[0][i];
-                pars[4] = TableLoader.distbeta[0][i];
-                pars[5] = TableLoader.delta_bfield_coefficient[0][i];
-                pars[6] = TableLoader.b1[0][i];
-                pars[7] = TableLoader.b2[0][i];
-                pars[8] = TableLoader.b3[0][i];
-                pars[9] = TableLoader.b4[0][i];
-                pars[10] = 2.*Constants.getInstance().wpdist[i];//fix dmax
-            }
+            
+            pars[0] = TableLoader.v0[0][i];
+            pars[1] = TableLoader.vmid[0][i];
+            pars[2] = TableLoader.FracDmaxAtMinVel[0][i];
+            pars[3] = TableLoader.Tmax[0][i];
+            pars[4] = TableLoader.distbeta[0][i];
+            pars[5] = TableLoader.delta_bfield_coefficient[0][i];
+            pars[6] = TableLoader.b1[0][i];
+            pars[7] = TableLoader.b2[0][i];
+            pars[8] = TableLoader.b3[0][i];
+            pars[9] = TableLoader.b4[0][i];
+            pars[10] = 2.*Constants.getInstance().wpdist[i];//fix dmax
+            
             resetPars[i] = pars;
             TvstrkdocasFitPars.put(new Coordinate(i), new MnUserParameters());
             for(int p = 0; p < 10; p++) {
@@ -1006,33 +991,19 @@ public class T2DCalib extends AnalysisMonitor{
     private void reLoadFitPars() {
         for (int s =0; s < 6; s++) {
             for (int i = 0; i < this.nsl; i++) {
-                if(t2DTbBeta) {
-                    TableLoaderExtended.v0[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(0);
-                    TableLoaderExtended.vmid[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(1);
-                    TableLoaderExtended.FracDmaxAtMinVel[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(2);
-                    System.out.println("TMAX "+TableLoaderExtended.Tmax[s][i]+" ==> ");
-                    TableLoaderExtended.Tmax[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(3);
-                    System.out.println(".................... "+TableLoaderExtended.Tmax[s][i]+"");
-                    TableLoaderExtended.distbeta[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(4);
-                    TableLoaderExtended.delta_bfield_coefficient[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(5);
-                    TableLoaderExtended.b1[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(6);
-                    TableLoaderExtended.b2[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(7);
-                    TableLoaderExtended.b3[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(8);
-                    TableLoaderExtended.b4[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(9);
-                } else {
-                    TableLoader.v0[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(0);
-                    TableLoader.vmid[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(1);
-                    TableLoader.FracDmaxAtMinVel[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(2);
-                    System.out.println("TMAX "+TableLoader.Tmax[s][i]+" ==> ");
-                    TableLoader.Tmax[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(3);
-                    System.out.println(".................... "+TableLoader.Tmax[s][i]+"");
-                    TableLoader.distbeta[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(4);
-                    TableLoader.delta_bfield_coefficient[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(5);
-                    TableLoader.b1[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(6);
-                    TableLoader.b2[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(7);
-                    TableLoader.b3[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(8);
-                    TableLoader.b4[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(9);
-                }
+                TableLoader.v0[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(0);
+                TableLoader.vmid[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(1);
+                TableLoader.FracDmaxAtMinVel[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(2);
+                System.out.println("TMAX "+TableLoader.Tmax[s][i]+" ==> ");
+                TableLoader.Tmax[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(3);
+                System.out.println(".................... "+TableLoader.Tmax[s][i]+"");
+                TableLoader.distbeta[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(4);
+                TableLoader.delta_bfield_coefficient[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(5);
+                TableLoader.b1[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(6);
+                TableLoader.b2[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(7);
+                TableLoader.b3[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(8);
+                TableLoader.b4[s][i] = TvstrkdocasFitPars.get(new Coordinate(i)).value(9);
+                
             }
         }
         for (int i = 0; i < this.nsl; i++) {
@@ -1041,15 +1012,14 @@ public class T2DCalib extends AnalysisMonitor{
                 ParsVsIter.get(new Coordinate(i,p)).setBinError(0, TvstrkdocasFitPars.get(new Coordinate(i)).error(p));
             }
         }
-        if(t2DTbBeta) {
-            TableLoaderExtended.ReFill();
-        } else {
-            TableLoader.ReFill();
-        }
+        TableLoader.ReFill();
+        
     }
     
     public void Plot(int i , int j) {
-        
+        DataLine l = new DataLine(0, 0, 1, 0);
+        l.setLineStyle(2);
+        l.setLineColor(2);
         if(i<2 || i>3) { // regions 1 and 3 --> no b-field
             if(TvstrkdocasProf.get(new Coordinate(i, j, BBins)).getVectorX().size()>0) {
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T").cd(0);
@@ -1064,7 +1034,19 @@ public class T2DCalib extends AnalysisMonitor{
                         draw(TvstrkdocasFits.get(new Coordinate(i, j, BBins)), "same");
                 this.getAnalysisCanvas().getCanvas("CalcDoca vs T").
                         draw(TvstrkdocasFits.get(new Coordinate(i, j, BBins)), "same");
-                
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").cd(0);
+                GraphErrors g1 = new GraphErrors();
+                GraphErrors g2 = new GraphErrors();
+                g1.copy(TvstrkdocasProf.get(new Coordinate(i, j, BBins)));
+                for(int ip =0; ip<g1.getVectorX().getSize(); ip++) {
+                    if(g1.getDataEY(ip)!=0) {
+                        double yf = TvstrkdocasFits.get(new Coordinate(i, j, BBins)).evaluate(g1.getDataX(ip));
+                        double y = g1.getDataY(ip);
+                        g2.addPoint(g1.getDataX(ip), y-yf, 0, g1.getDataEY(ip));
+                    }       
+                }
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "E");
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
             }
         } else {   
             //plot the profiles for the various B-field components
@@ -1075,7 +1057,7 @@ public class T2DCalib extends AnalysisMonitor{
             this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").draw(Tvstrkdocas.get(new Coordinate(i, j, BBins)));
             this.getAnalysisCanvas().getCanvas("CalcDoca vs T").cd(0);
             this.getAnalysisCanvas().getCanvas("CalcDoca vs T").draw(Tvscalcdocas.get(new Coordinate(i, j, BBins)));    
-
+            
             for(int k = 0; k < this.BBins; k++) {
                 if(TvstrkdocasProf.get(new Coordinate(i, j, k)).getVectorX().size()>0){
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").
@@ -1086,7 +1068,24 @@ public class T2DCalib extends AnalysisMonitor{
                     draw(TvstrkdocasFits.get(new Coordinate(i, j, k)), "same");
                 }
             }
-            
+            this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").cd(0);
+            for(int k = 0; k < this.BBins; k++) {
+                if(TvstrkdocasProf.get(new Coordinate(i, j, k)).getVectorX().size()>0){
+                    GraphErrors g1 = new GraphErrors();
+                    GraphErrors g2 = new GraphErrors();
+                    g2.setMarkerColor(k+1);
+                    g1.copy(TvstrkdocasProf.get(new Coordinate(i, j, k)));
+                    for(int ip =0; ip<g1.getVectorX().getSize(); ip++) {
+                        if(g1.getDataEY(ip)!=0) {
+                            double yf = TvstrkdocasFits.get(new Coordinate(i, j, k)).evaluate(g1.getDataX(ip));
+                            double y = g1.getDataY(ip);
+                            g2.addPoint(g1.getDataX(ip), y-yf, 0, g1.getDataEY(ip));
+                        }       
+                    }
+                    this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "Esame");
+                    this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
+                }
+            }
         }
     }
     @Override
@@ -1321,14 +1320,7 @@ public class T2DCalib extends AnalysisMonitor{
         double deltatime_beta = util.getDeltaTimeBeta(d, beta, distbeta, v0);
         hit.set_DeltaTimeBeta(deltatime_beta);
         double deltadoca_beta = 0;
-        if(t2DTbBeta) {
-            deltadoca_beta = util.calcDeltaDocaBeta(d, 
-                    distbeta, TableLoaderExtended.distbetascale[hit.get_Sector()-1][hit.get_Superlayer()-1], beta);
-        } else {
-            deltadoca_beta = util.calcDeltaDocaBeta(d, 
-                    distbeta, TableLoader.distbetascale[hit.get_Sector()-1][hit.get_Superlayer()-1], beta);
-        }
-        hit.set_DeltaDocaBeta(deltadoca_beta);
+       
         hit.set_Doca(this.timeToDistance(hit.get_Sector(), hit.get_Superlayer(), 
                     hit.getAlpha(), hit.get_Beta(), hit.getB(), calibTime, 0));
         if(flagOT) {
@@ -1348,9 +1340,7 @@ public class T2DCalib extends AnalysisMonitor{
     }
     
     
-    
-    private TimeToDistanceEstimator tde = new TimeToDistanceEstimator();
-    private TimeToDistanceEstimatorExtended tdee = new TimeToDistanceEstimatorExtended();
+    private TimeToDistanceEstimator tdee = new TimeToDistanceEstimator();
     private double timeToDistance(int sector, int superlayer, double alpha, double beta, double B, double time,
                                 double deltadoca_beta) {
         double distance = 0;
@@ -1364,15 +1354,11 @@ public class T2DCalib extends AnalysisMonitor{
         double correctedTime = time;
         if(correctedTime<=0)
             correctedTime=0.01; // fixes edge effects ... to be improved
-        if(t2DTbBeta) {
-            distance = tdee.interpolateOnGrid(B, ralpha, beta,
-                        correctedTime, 
-                        sector-1, superlayer-1) ; 
-        } else {
-            distance = tde.interpolateOnGrid(B, ralpha, 
-                        correctedTime, 
-                        sector-1, superlayer-1) ; 
-        }
+        
+        distance = tdee.interpolateOnGrid(B, ralpha, beta,
+                    correctedTime, 
+                    sector-1, superlayer-1) ; 
+        
         return distance;
     }
 
