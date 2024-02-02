@@ -4,12 +4,13 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map; 
+import org.clas.detector.clas12calibration.dc.calt2d.FitFunction;
+import org.clas.detector.clas12calibration.dc.calt2d.T2DCalib;
 import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
+import org.clas.detector.clas12calibration.viewer.T2DViewer;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.groot.data.GraphErrors;
-import org.jlab.groot.ui.TCanvas;
 import org.jlab.rec.dc.Constants;
-import org.jlab.rec.dc.timetodistance.T2DFunctions;
 import org.jlab.utils.groups.IndexedTable;
 
 
@@ -25,6 +26,7 @@ public class TableLoader {
     static boolean T0LOADED = false;
     
     public static double[] BfieldValues = new double[]{0.0000, 1.0000, 1.4142, 1.7321, 2.0000, 2.2361, 2.4495, 2.6458};
+    public static double[] betaValues = new double[] {0.6, 0.7, 0.8, 0.9, 1.0};
     static int minBinIdxB = 0;
     static int maxBinIdxB = BfieldValues.length-1;
     static int minBinIdxAlpha = 0;
@@ -33,7 +35,7 @@ public class TableLoader {
     public static double[][] AlphaBounds = new double[6][2];
     static int minBinIdxT  = 0;
     static int[][][][] maxBinIdxT  = new int[6][6][8][6];
-    public static double[][][][][] DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
+    public static double[][][][][][] DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][betaValues.length][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
     
     
     private static double[][][][] T0 ;
@@ -131,7 +133,7 @@ public class TableLoader {
     static Map<Integer, GraphErrors> sup4 = new HashMap<Integer, GraphErrors>();
     static Map<Integer, GraphErrors> sup5 = new HashMap<Integer, GraphErrors>();
     static Map<Integer, GraphErrors> sup6 = new HashMap<Integer, GraphErrors>();
-    public static synchronized void Fill(IndexedTable tab) {
+    public static synchronized void Fill(IndexedTable t2dPressure, IndexedTable t2dPressRef, IndexedTable pressure) {
         for(int a = 0; a<6; a++ ){ // loop over alpha
             sup1.put(a, new GraphErrors()); 
             sup1.get(a).setMarkerColor(a+1);
@@ -168,167 +170,104 @@ public class TableLoader {
         df.setRoundingMode(RoundingMode.CEILING);
         
         FillAlpha();
+        double p_ref = t2dPressRef.getDoubleValue("pressure", 0,0,0);
+        double p = pressure.getDoubleValue("value", 0,0,3);
+        double dp = p - p_ref;
+        double dp2scale = 0;
+        double dpscale = 1;
+        boolean useP = Boolean.parseBoolean(T2DViewer.usePressureTerm.getText());
+        if(!useP) 
+            dpscale = 0;
         for(int s = 0; s<6; s++ ){ // loop over sectors
-
-                for(int r = 0; r<6; r++ ){ //loop over slys
-                    // Fill constants
-                    delta_T0[s][r] = tab.getDoubleValue("delta_T0", s+1,r+1,0);
-                    FracDmaxAtMinVel[s][r] = tab.getDoubleValue("c1", s+1,r+1,0);//use same table. names strings 
-                    deltanm[s][r] = tab.getDoubleValue("deltanm", s+1,r+1,0);
-                    v0[s][r] = tab.getDoubleValue("v0", s+1,r+1,0);
-                    vmid[s][r] = tab.getDoubleValue("c2", s+1,r+1,0);
-                    distbetascale[s][r] = 1;
-                    delta_bfield_coefficient[s][r] = tab.getDoubleValue("delta_bfield_coefficient", s+1,r+1,0); 
-                    distbeta[s][r] = tab.getDoubleValue("distbeta", s+1,r+1,0); 
-                    b1[s][r] = tab.getDoubleValue("b1", s+1,r+1,0);
-                    b2[s][r] = tab.getDoubleValue("b2", s+1,r+1,0);
-                    b3[s][r] = tab.getDoubleValue("b3", s+1,r+1,0);
-                    b4[s][r] = tab.getDoubleValue("b4", s+1,r+1,0);
-                    Tmax[s][r] = tab.getDoubleValue("tmax", s+1,r+1,0);
-                    // end fill constants
-                    //System.out.println("sector "+(s+1)+" sly "+(r+1)+" v0 "+v0[s][r]+" vmid "+vmid[s][r]+" R "+FracDmaxAtMinVel[s][r]);
-                    double dmax = 2.*Constants.getInstance().wpdist[r]; 
-                    //double tmax = CCDBConstants.getTMAXSUPERLAYER()[s][r];
-                    for(int ibfield =0; ibfield<maxBinIdxB+1; ibfield++) {
-                        double bfield = BfieldValues[ibfield];
+            for(int r = 0; r<6; r++ ){ //loop over slys
+                // Fill constants
+                FracDmaxAtMinVel[s][r] = t2dPressure.getDoubleValue("c1_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("c1_a1", s+1,r+1,0)*dp*dpscale;
+                v0[s][r] = t2dPressure.getDoubleValue("v0_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("v0_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("v0_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                vmid[s][r] = t2dPressure.getDoubleValue("vmid_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("vmid_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("vmid_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                distbeta[s][r] = t2dPressure.getDoubleValue("distbeta_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("distbeta_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("distbeta_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                delta_bfield_coefficient[s][r] = t2dPressure.getDoubleValue("delta_bfield_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("delta_bfield_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("delta_bfield_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b1[s][r] = t2dPressure.getDoubleValue("b1_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b2[s][r] = t2dPressure.getDoubleValue("b2_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b2_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b2_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b3[s][r] = t2dPressure.getDoubleValue("b3_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b4[s][r] = t2dPressure.getDoubleValue("b4_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b4_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b4_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                Tmax[s][r] = t2dPressure.getDoubleValue("tmax_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("tmax_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("tmax_a2", s+1,r+1,0)*dp*dp*dp2scale;
+             
+                // end fill constants
+                //System.out.println("sector "+(s+1)+" sly "+(r+1)+" v0 "+v0[s][r]+" vmid "+vmid[s][r]+" R "+FracDmaxAtMinVel[s][r]);
+                double dmax = 2.*Constants.getInstance().wpdist[r]; 
+                //double tmax = CCDBConstants.getTMAXSUPERLAYER()[s][r];
+                for(int ibfield =0; ibfield<maxBinIdxB+1; ibfield++) {
+                    double bfield = BfieldValues[ibfield];
+                    for(int ibeta=0; ibeta<betaValues.length; ibeta++) {
 
                         for(int icosalpha =0; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
-                                maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
-                                double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
-                                double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
-                                
-                                int nxmax = (int) (dmax*cos30minusalpha/stepSize); 
-                                
-                                for(int idist =0; idist<nxmax; idist++) {
+                            maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
+                            double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
+                            double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
+                            int nxmax = (int) (dmax*cos30minusalpha/stepSize)+1; 
 
-                                    double x = (double)(idist+1)*stepSize;
-                                    double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
-                                    
-                                    int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-                                    
-                                    if(tbin<0 || tbin>nBinsT-1) {
-                                        //System.err.println("Problem with tbin");
-                                        continue;
-                                    }
-                                    if(tbin>maxTBin)
-                                        maxTBin = tbin;
-                                    //if(tbin>maxBinIdxT[s][r][ibfield][icosalpha]) {
-                                        //maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
-                                    //} //System.out.println("tbin "+tbin+" tmax "+tmax+ "s "+s+" sl "+r );
-                                    if(DISTFROMTIME[s][r][ibfield][icosalpha][tbin]==0) {
-                                        // firstbin = bi
-                                        // bincount = 0;				    	 
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x;
-                                    } else {
-                                        // test for getting center of the bin (to be validated):
-                                        //double prevTime = calc_Time(x-stepSize,  alpha, bfield, s+1, r+1);
-                                        //if(x>DISTFROMTIME[s][r][ibfield][icosalpha][tbin]
-                                        //        && Math.abs((double)(2.*tbin+1)-timebfield)<=Math.abs((double)(2.*tbin+1)-prevTime)) {
-                                        //    DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x;
-                                        //}
-                                        // bincount++;
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]+=stepSize;
-                                    }
-                                    
-                                    /* if(timebfield>timebfield_max) {
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x-stepSize*0.5;
-                                        if(DISTFROMTIME[s][r][ibfield][icosalpha][tbin]>dmax)
-                                            DISTFROMTIME[s][r][ibfield][icosalpha][tbin] = dmax;                                               
-                                    } */
+                            for(int idist =0; idist<nxmax; idist++) {
+
+                                double x = (double)(idist+1)*stepSize;
+                                double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
+                                double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
+                                timebfield+=deltatime_beta;
+
+                                int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
+
+                                if(tbin<0 || tbin>nBinsT-1) {
+                                    //System.err.println("Problem with tbin");
+                                    continue;
+                                }
+                                if(tbin>maxTBin)
+                                    maxTBin = tbin;
+                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]==0) {
+                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=x;
+                                } else {
+                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]+=stepSize;
+                                }
+                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax) {
+                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=dmax*cos30minusalpha;
+                                    idist=nxmax;
                                 }
                             }
                         }
+                    }
                 }
+            }
         }	
         TableLoader.fillMissingTableBins();
-        //TableLoader.test();
+        fillT2DGraphs();
         System.out.println(" T2D TABLE FILLED.....");
         //testBeq1();
         //test();
         T2DLOADED = true;
      }
-    private static void testBeq1() {
-        DecimalFormat df = new DecimalFormat("#");
-        df.setRoundingMode(RoundingMode.CEILING);
-        int ib = 1;
-        int s = 0;
-      
-        for(int a = 0; a < 6; a++) {
-            for(int t =0; t<800; t++) {
-                
-                double time = (double) t;
-                int tbin = Integer.parseInt(df.format(time/2.) ) -1;
-                if(tbin<0)
-                    tbin =0;
-                double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (a)*(1. - Math.cos(Math.toRadians(30.)))/5.;
-                double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
-                if(t<200)
-                    sup1.get(a).addPoint(time, DISTFROMTIME[s][0][ib][a][tbin], 0, 0);
-                if(t<240)
-                    sup2.get(a).addPoint(time, DISTFROMTIME[s][1][ib][a][tbin], 0, 0);
-                if(t<500)
-                    sup3.get(a).addPoint(time, DISTFROMTIME[s][2][ib][a][tbin], 0, 0);
-                if(t<560)
-                    sup4.get(a).addPoint(time, DISTFROMTIME[s][3][ib][a][tbin], 0, 0);
-                if(t<750)
-                        sup5.get(a).addPoint(time, DISTFROMTIME[s][4][ib][a][tbin], 0, 0);
-                if(t<780)
-                    sup6.get(a).addPoint(time, DISTFROMTIME[s][5][ib][a][tbin], 0, 0);
-            }
-        }
-        TCanvas can1 = new TCanvas("c1", 800, 800);
-        can1.divide(2, 3);
-        can1.cd(0);
-        can1.draw(sup1.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup1.get(a), "same");
-        }
-        can1.cd(1);
-        can1.draw(sup2.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup2.get(a), "same");
-        }
-        can1.cd(2);
-        can1.draw(sup3.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup3.get(a), "same");
-        }
-        can1.cd(3);
-        can1.draw(sup4.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup4.get(a), "same");
-        }
-        can1.cd(4);
-        can1.draw(sup5.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup5.get(a), "same");
-        }
-        can1.cd(5);
-        can1.draw(sup6.get(0));
-        for(int a = 1; a < 6; a++) {
-            can1.draw(sup6.get(a), "same");
-        }
-    }
-    private static void test() {
-        for(int r = 2; r<3; r++ ){ //loop over slys
-            for(int ibfield =1; ibfield<2; ibfield++) {
-                for(int t = 1; t<100; t++)
-                for(int icosalpha =0; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
-                    double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
-                    double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
-                    int nxmax = (int) (2.*Constants.getInstance().wpdist[r]*cos30minusalpha/0.0010); 
-
-                    System.out.println("t "+(t)+" B bin "+ibfield+" alpha bin "+icosalpha+
-                            "alpha "+(float) alpha+" nteps "+nxmax
-                            +" value "+DISTFROMTIME[0][r][ibfield][icosalpha][t]);
-                }
-            }
-        }
-    }
+    
+    
     
     public static synchronized void ReFill() {
         //reset
-        DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
+        DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][betaValues.length][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
         minBinIdxT  = 0;
         maxBinIdxT  = new int[6][6][8][6];
         maxTBin = -1;
@@ -350,43 +289,29 @@ public class TableLoader {
                                 double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
                                 double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
                                 int nxmax = (int) (dmax*cos30minusalpha/stepSize); 
-                                
-                                for(int idist =0; idist<nxmax; idist++) {
+                                for(int ibeta=0; ibeta<betaValues.length; ibeta++) {
+                                    for(int idist =0; idist<nxmax; idist++) {
 
-                                    double x = (double)(idist+1)*stepSize;
-                                    double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
-                                    
-                                    int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-                                    
-                                    if(tbin<0 || tbin>nBinsT-1) {
-                                        //System.err.println("Problem with tbin");
-                                        continue;
+                                        double x = (double)(idist+1)*stepSize;
+                                        double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
+                                        double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
+                                        timebfield+=deltatime_beta;
+                                        
+                                        int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
+
+                                        if(tbin<0 || tbin>nBinsT-1) {
+                                            //System.err.println("Problem with tbin");
+                                            continue;
+                                        }
+                                        if(tbin>maxTBin)
+                                            maxTBin = tbin;
+                                        if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]==0) {
+                                            DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=x;
+                                        } else {
+                                            DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]+=stepSize;
+                                        }
+
                                     }
-                                    if(tbin>maxTBin)
-                                        maxTBin = tbin;
-                                    //if(tbin>maxBinIdxT[s][r][ibfield][icosalpha]) {
-                                        //maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
-                                    //} //System.out.println("tbin "+tbin+" tmax "+tmax+ "s "+s+" sl "+r );
-                                    if(DISTFROMTIME[s][r][ibfield][icosalpha][tbin]==0) {
-                                        // firstbin = bi
-                                        // bincount = 0;				    	 
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x;
-                                    } else {
-                                        // test for getting center of the bin (to be validated):
-                                        //double prevTime = calc_Time(x-stepSize,  alpha, bfield, s+1, r+1);
-                                        //if(x>DISTFROMTIME[s][r][ibfield][icosalpha][tbin]
-                                        //        && Math.abs((double)(2.*tbin+1)-timebfield)<=Math.abs((double)(2.*tbin+1)-prevTime)) {
-                                        //    DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x;
-                                        //}
-                                        // bincount++;
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]+=stepSize;
-                                    }
-                                    
-                                    /* if(timebfield>timebfield_max) {
-                                        DISTFROMTIME[s][r][ibfield][icosalpha][tbin]=x-stepSize*0.5;
-                                        if(DISTFROMTIME[s][r][ibfield][icosalpha][tbin]>dmax)
-                                            DISTFROMTIME[s][r][ibfield][icosalpha][tbin] = dmax;                                               
-                                    } */
                                 }
                             }
                         }
@@ -394,6 +319,7 @@ public class TableLoader {
         }	
         TableLoader.fillMissingTableBins();
         //TableLoader.test();
+        fillT2DGraphs();
         System.out.println(" T2D TABLE RE-FILLED.....");
      }
     
@@ -408,12 +334,37 @@ public class TableLoader {
                     
                     for(int icosalpha =0; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
                         
-                        for(int tbin = 0; tbin<maxTBin; tbin++) {
-                            if(DISTFROMTIME[s][r][ibfield][icosalpha][tbin]!=0 && DISTFROMTIME[s][r][ibfield][icosalpha][tbin+1]==0) {
-                                DISTFROMTIME[s][r][ibfield][icosalpha][tbin+1] = DISTFROMTIME[s][r][ibfield][icosalpha][tbin];
+                        for(int ibeta=0; ibeta<betaValues.length; ibeta++) {
+                            
+                            for(int tbin = 0; tbin<maxTBin; tbin++) {
+                                
+                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]!=0 && DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin+1]==0) {
+                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin+1] = DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin];
+                                }
                             }
                         }
-                        
+                    }
+                }
+            }
+        }
+    }
+    public static void fillT2DGraphs() {
+        TimeToDistanceEstimator t2de = new TimeToDistanceEstimator();
+        for(int r = 0; r<6; r++ ){ //loop over slys
+            for(int ibfield =0; ibfield<1; ibfield++) {
+                for(int icosalpha =0; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
+                    double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
+                    double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
+                    for(int ibeta=4; ibeta<5; ibeta++) {
+                        for(int tbin = 0; tbin<maxTBin; tbin++) {
+                            double time = 2*(tbin+1);
+                            double doca = DISTFROMTIME[0][r][0][icosalpha][ibeta][tbin];
+                            double calctime = calc_Time( doca,  alpha, 0, 1, r+1) ;
+                            double deltatime_beta = util.getDeltaTimeBeta(doca,betaValues[ibeta],distbeta[0][r],v0[0][r]);
+                            calctime+=deltatime_beta;
+                            double calcdoca = t2de.interpolateOnGrid(0, alpha, 1, time,  0, r);
+                            if(r==0 && time-calctime <4)System.out.println("alpha "+alpha+" time "+time+" calctime "+calctime+" doca "+doca+" calcdoca "+calcdoca);
+                        }
                     }
                 }
             }
@@ -429,7 +380,17 @@ public class TableLoader {
      * @return returns time (ns) when given inputs of distance x (cm), local angle alpha (degrees) and magnitude of bfield (Tesla).  
      */
     private static Utilities util = new Utilities();
-   
+    
+    private static int getAlphaBinT2DC(double alpha) {
+        int v = -1;
+        for(int i = 0; i<T2DCalib.AlphaValues.length; i++) {
+            
+            if(Math.abs(alpha-T2DCalib.AlphaValues[i])<T2DCalib.AlphaBinHalfWidth)
+                v = i;
+        } 
+        
+        return v;
+    }
     
     public static synchronized double calc_Time(double x, double alpha, double bfield, int sector, int superlayer) {
         int s = sector - 1;
@@ -443,7 +404,7 @@ public class TableLoader {
         double Bb4 = b4[s][r];
         if(x>dmax)
             x=dmax;
-       return T2DFunctions.polyFcnMac(x, alpha, bfield, v0[s][r], vmid[s][r], FracDmaxAtMinVel[s][r], 
+       return FitFunction.polyFcnMac(x, alpha, bfield, v0[s][r], vmid[s][r], FracDmaxAtMinVel[s][r], 
                 tmax, dmax, delBf, Bb1, Bb2, Bb3, Bb4, superlayer) ;
         
     }
@@ -451,9 +412,7 @@ public class TableLoader {
     public static double[][] delta_T0 = new double[6][6];
     public static double[][] delta_bfield_coefficient = new double[6][6];
     public static double[][] distbeta = new double[6][6];
-    public static double[][] deltanm = new double[6][6];
     public static double[][] vmid = new double[6][6];
-    public static double[][] distbetascale = new double[6][6];
     public static double[][] v0 = new double[6][6];
     public static double[][] b1 = new double[6][6];
     public static double[][] b2 = new double[6][6];
