@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.analysis.FitPanel;
 import org.clas.detector.clas12calibration.dc.t2d.TableLoader;
@@ -62,9 +64,10 @@ public class T2DCalib extends AnalysisMonitor{
     private HipoDataEvent calhipoEvent = null;
     private HipoDataEvent hipoEvent = null;
     private SchemaFactory schemaFactory = new SchemaFactory();
-    FitPanel fp;
+    public FitPanel fp;
     PrintWriter pw = null;
     PrintWriter pw2 = null;
+    PrintWriter pw3 = null;
     File outfile = null;
     private int runNumber;
     private Utilities util = new Utilities();
@@ -110,8 +113,9 @@ public class T2DCalib extends AnalysisMonitor{
     private Map<Coordinate, H2F> Tvstrkdocas                = new HashMap<Coordinate, H2F>();
     private Map<Coordinate, H2F> Tvscalcdocas               = new HashMap<Coordinate, H2F>();
     private Map<Coordinate, GraphErrors> TvstrkdocasProf    = new HashMap<Coordinate, GraphErrors>();
+    private Map<Coordinate, GraphErrors> TvstrkdocasInit    = new HashMap<Coordinate, GraphErrors>();
     private Map<Coordinate, FitFunction> TvstrkdocasFit             = new HashMap<Coordinate, FitFunction>();
-    private Map<Coordinate, MnUserParameters> TvstrkdocasFitPars    = new HashMap<Coordinate, MnUserParameters>();
+    public Map<Coordinate, MnUserParameters> TvstrkdocasFitPars    = new HashMap<Coordinate, MnUserParameters>();
     public  Map<Coordinate, FitLine> TvstrkdocasFits                = new HashMap<Coordinate, FitLine>();
     private Map<Coordinate, H1F> timeResi               = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H1F> timeResiFromFile       = new HashMap<Coordinate, H1F>();
@@ -120,7 +124,7 @@ public class T2DCalib extends AnalysisMonitor{
     private Map<Coordinate, H1F> B              = new HashMap<Coordinate, H1F>(); //histogram to get B values centroids
     private Map<Coordinate, H1F> BAlphaBins              = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H1F> ParsVsIter    = new HashMap<Coordinate, H1F>();
-    int nsl = 6;
+    public int nsl = 6;
 
     public static double[] BfieldValues = new double[]{0.707106781,1.224744871,1.58113883,1.87082869,2.121320344,2.34520788,2.549509757,2.738612788};   
     public static double[] AlphaValues = new double[]{-40,-36,-32,-28,-24,-20,-16,-12,-8,-4,0,4,8,12,16,20,24,28,32,36,40};
@@ -165,7 +169,10 @@ public class T2DCalib extends AnalysisMonitor{
                             +", B "+k, 200, 0, 2.0, 200, 0, 500.0+(int)(i/2)*450.0));
                     
                     TvstrkdocasProf.put(new Coordinate(i,j,k), new GraphErrors());
+                    TvstrkdocasInit.put(new Coordinate(i,j,k), new GraphErrors());
                     TvstrkdocasProf.get(new Coordinate(i,j,k)).setMarkerColor(k+1);
+                    TvstrkdocasInit.get(new Coordinate(i,j,k)).setMarkerColor(k+1);
+                    TvstrkdocasInit.get(new Coordinate(i,j,k)).setMarkerStyle(2);
                     
                     Tvscalcdocas.put(new Coordinate(i,j,k), new H2F("calcDocavsT" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
@@ -173,6 +180,7 @@ public class T2DCalib extends AnalysisMonitor{
                     tdp.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), ijk);
                     //trkdvst.addDataSet(Tvstrkdocas.get(new Coordinate(i,j,k)), 0);
                     prfdvst.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), 0);
+                    prfdvst.addDataSet(TvstrkdocasInit.get(new Coordinate(i,j,k)), 0);
                     TvstrkdocasFits.put(new Coordinate(i,j,k), new FitLine());
                     prfdvst.addDataSet(TvstrkdocasFits.get(new Coordinate(i,j,k)), 0);
                     this.getDataGroup().add(prfdvst, 0, i+1, j+1);
@@ -280,23 +288,29 @@ public class T2DCalib extends AnalysisMonitor{
             
         for (int i = 0; i < this.nsl; i++) {
             for (int j = 0; j < this.alphaBins; j++) {
-                System.out.println("fill for "+i+", "+j);
                 this.filltrkDocavsTGraphs(i,j);
             }
             //runFit(i); 
-            
         }
         reLoadFitPars();
+        
         //fp.refit();
         //pw.close();
         this.getAnalysisCanvas().getCanvas("Time Residuals").divide(nsl, 3);
         //
         for(int i = 0; i<this.nsl; i++) {
+            this.runInitFit(i);
             this.getAnalysisCanvas().getCanvas("Time Residuals").cd(i);
             this.fitTimeResPlot(timeResiFromFile.get(new Coordinate(i)), 
                     this.getAnalysisCanvas().getCanvas("Time Residuals"));
         }
         fp.setGreenFitButton();
+        try {
+            this.plotFits(true);
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(T2DCalib.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        this.plotHistos();
     }
     public void plotFits(boolean fitted) throws FileNotFoundException {
         if(fitted==true) {
@@ -309,11 +323,14 @@ public class T2DCalib extends AnalysisMonitor{
             String fileName2 = "Files/parameteranderror_run" + this.runNumber + "time_" 
                     + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
            
+            String fileName3 = "Files/minuit_run" + this.runNumber + "time_" 
+                    + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
+            
             pw = new PrintWriter(fileName);
             pw.printf("#& sector superlayer component v0 deltanm tmax distbeta delta_bfield_coefficient b1 b2 b3 b4 delta_T0 c1 c2 c3\n");
             pw2 = new PrintWriter(fileName2);
             pw2.printf("#& sector superlayer component v0 +/-v0 tmax +/-tmax vmid +/-vmid delta_bf +/-delta_bf distbeta +/-distbeta \n");
-        
+            pw3 = new PrintWriter(fileName3);
             
             int ij =0;
             int ip =0;
@@ -428,6 +445,12 @@ public class T2DCalib extends AnalysisMonitor{
     private MnMigrad migrad = null;
     
     public int NbRunFit = 0;
+    
+    public void runInitFit(int i) {
+        TvstrkdocasFit.put(new Coordinate(i), 
+                new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
+        
+    }
     public void runFit(int i, boolean fixFit[][]) {
         // i = superlayer - 1;
         System.out.println(" **************** ");
@@ -472,6 +495,11 @@ public class T2DCalib extends AnalysisMonitor{
             
             System.err.println(min);
             
+            if(it==maxIter-1) {
+                System.out.println("FINAL FIT MINUIT ");
+                String s = String.valueOf(min);  System.out.println(s);
+                pw3.print(s);
+            }
         }
         
 //        for(int isec = 0; isec < 6; isec++) {
@@ -676,28 +704,49 @@ public class T2DCalib extends AnalysisMonitor{
         gaus1Func.setParameter(1, 0.0);
         gaus1Func.setParameter(2, 0.05);
         DataFitter.fit(gaus1Func, h1, "Q");
+        
+        int binMax = h1.getMaximumBin(); 
+        double hm = h1.getDataY(binMax)/3; 
+        double xlo = 0; 
+        double xhi =0; 
+        for(int b = 0; b<binMax-1; b++) {
+            if(h1.getDataY(b)<=hm && h1.getDataY(b+1) >hm) {
+                xlo = h1.getDataX(b);
+                break;
+            }
+                
+        }
+        
+        for(int b = binMax; b<99; b++) {
+            if(h1.getDataY(b+1)<=hm && h1.getDataY(b) >hm) {
+                xhi = h1.getDataX(b);
+                break;
+            }
+                
+        }
+        gaus1Func.setRange(xlo, xhi);
+        DataFitter.fit(gaus1Func, h1, "Q");
+        
         //refit using a double gaussian 
-        F1D gausFunc = new F1D("gausFunc", "[amp]*gaus(x,[mean],[sigma])+[amp2]*gaus(x,[mean],[sigma2])", -0.3, 0.3); 
+        F1D gausFunc = new F1D("gausFunc", "[amp]*gaus(x,[mean],[sigma])+0.25*[amp]*gaus(x,[mean],[sigma2])", -0.3, 0.3); 
         gausFunc.setLineColor(4);
         gausFunc.setLineStyle(1);
         gausFunc.setLineWidth(2);
         gausFunc.setParameter(0, gaus1Func.getParameter(0));
         gausFunc.setParameter(1, gaus1Func.getParameter(1));
         gausFunc.setParameter(2, gaus1Func.getParameter(2)*0.75);
-        gausFunc.setParameter(3, gaus1Func.getParameter(0)*0.15);
-        gausFunc.setParameter(4, gaus1Func.getParameter(2));
-        gausFunc.setOptStat(1110);
-        h1.setOptStat(110); //only number of entries
+        gausFunc.setParameter(3, gaus1Func.getParameter(2));
+        gausFunc.setOptStat(11100);
+        h1.setOptStat(11); //only number of entries
         //canvasRes.clear();
         
         DataFitter.fit(gausFunc, h1, "Q");
         //gausFunc.setOptStat(101100);
-        gausFunc.setOptStat(101100); //mean and both sigmas
+        //gausFunc.setOptStat(101100); //mean and both sigmas
         
         
-        int effSig = (int) (10000*this.getError(gausFunc.getParameter(0), gausFunc.getParameter(2), 
-                gausFunc.getParameter(3),  gausFunc.getParameter(4)));
-        String t = "eff. Sig. "+effSig + "microns";
+        int effSig = (int) (10000*(gaus1Func.getParameter(2)));
+        String t = "Eff. Sig. "+effSig + "microns";
         h1.setTitle(t);
         canvasRes.draw(h1, "E1");
         //canvasRes.draw(gausFunc, "same");
@@ -729,50 +778,61 @@ public class T2DCalib extends AnalysisMonitor{
         //return bbinIdx ;
         return v ;
     }
-     private int MINENTRIES = 10;
-    F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
-    F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
+    private int MINENTRIES = 5;
     
+    F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
+    F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
     private void filltrkDocavsTGraphs(int i, int j, int k) {
         
         if(TvstrkdocasProf.get(new Coordinate(i, j, k))!=null) {
             TvstrkdocasProf.get(new Coordinate(i, j, k)).reset();
             H2F h2 = Tvstrkdocas.get(new Coordinate(i, j, k));
             ArrayList<H1F> hslice = h2.getSlicesX();
-           
+            
             for(int si=0; si<hslice.size(); si++) {
                 double amp   = hslice.get(si).getBinContent(hslice.get(si).getMaximumBin());
-                double mean = hslice.get(si).getDataX(hslice.get(si).getMaximumBin());
+                double meanh = hslice.get(si).getDataX(hslice.get(si).getMaximumBin());
+                if(hslice.get(si).getMean()==0 || amp<this.MINENTRIES) {
                
-                if(amp<this.MINENTRIES) {
-                    
                 } else {
-                    
+                    double mean = hslice.get(si).getMean();
                     double x = h2.getXAxis().getBinCenter(si);
                     double y = hslice.get(si).getMean();
                     double sigma = hslice.get(si).getRMS(); 
                     
-                    if(x/(2.*Constants.getInstance().wpdist[i])>0.1) { // for large docas (90% of dmax take fit with a double gauss and take the peak of the one at smaller distance as y
-                        f2.setParameter(0, amp);
-                        f2.setParameter(1, mean);
-                        f2.setParameter(4, y+10);
-                        f2.setParameter(2, sigma);
-                        f2.setParameter(5, sigma+10);
-                        f2.setParameter(6, 0);
-                    
-                        DataFitter.fit(f2, hslice.get(si), "Q"); //No options uses error for sigma 
-                        if(f2.getChiSquare()<200 && f2.getParameter(1)>0 && f2.parameter(1).error()<50) {
-                            TvstrkdocasProf.get(new Coordinate(i, j, k)).
-                                    addPoint(x, f2.getParameter(1), 0, sigma);
-                        }
-                    } else {
+//                    if(x/(2.*Constants.getInstance().wpdist[i])>0.1) { // for large docas (90% of dmax take fit with a double gauss and take the peak of the one at smaller distance as y
+//                        f2.setParameter(0, amp);
+//                        f2.setParameter(1, mean);
+//                        f2.setParameter(2, sigma);
+//                        f2.setParameter(4, y+10);
+//                        f2.setParameter(5, sigma+10);
+//                        f2.setParameter(6, 0);
+//                    System.out.println(f2.isFitValid()+" "+f2.getParameter(0)+" "+f2.getParameter(1)
+//                                        +" "+f2.getParameter(2)+" "+f2.getParameter(3)
+//                                        +" "+f2.getParameter(4)+" "+f2.getParameter(5)+" "+f2.getParameter(6));
+//                        DataFitter.fit(f2, hslice.get(si), "Q"); //No options uses error for sigma 
+//                        if(f2.getChiSquare()<200 && f2.getParameter(1)>0 && f2.parameter(1).error()<50) {
+//                            TvstrkdocasProf.get(new Coordinate(i, j, k)).
+//                                    addPoint(x, f2.getParameter(1), 0, sigma);
+//                        }
+//                    } else 
+                    {
+                        double min = mean-3*sigma;
+                        double max = mean+3*sigma;
+                        if(min<0) min=0;
+                        f1.setRange(min, max);
                         f1.setParameter(0, amp);
                         f1.setParameter(1, mean);
                         f1.setParameter(2, sigma);
                         f1.setParameter(3, 0);
                         sigma = f1.getParameter(2);
-                        DataFitter.fit(f1, hslice.get(si), "Q"); //No options uses error for sigma 
-                        if(f1.getChiSquare()<200 && f1.getParameter(1)>0 && f1.parameter(1).error()<50) {
+                        
+                        DataFitter.fit(f1, hslice.get(si),"Q"); //No options uses error for sigma 
+
+                        if(f1.getChiSquare()<200 && f1.getParameter(1)>0
+                                && x<2.*Constants.getInstance().wpdist[i] 
+                                && f1.parameter(1).error()<50
+                                && Math.abs(meanh-f1.getParameter(1))<sigma && f1.getParameter(1)>0) {
                             TvstrkdocasProf.get(new Coordinate(i, j, k)).
                                     addPoint(x, f1.getParameter(1), 0, sigma);
                         }
@@ -868,8 +928,8 @@ public class T2DCalib extends AnalysisMonitor{
             // alpha in the bank is corrected for B field.  To fill the alpha bin use the uncorrected value
             double theta0 = Math.toDegrees(Math.acos(1-0.02*bFieldVal));
             double alphaUncor = bnkHits.getFloat("Alpha", i)+(double)T2DCalib.polarity*theta0;
-
-            int alphaBin = this.getAlphaBin(alphaUncor);
+            
+            int alphaBin = this.getAlphaBin(alphaUncor); 
             if(alphaBin==-1) 
                 continue;
             
@@ -935,6 +995,7 @@ public class T2DCalib extends AnalysisMonitor{
         calhitlist.clear();
         hitlist.clear();
         
+        
     }
     
     private double[][] resetPars = new double[6][11];
@@ -949,13 +1010,18 @@ public class T2DCalib extends AnalysisMonitor{
             TvstrkdocasFitPars.put(new Coordinate(i), new MnUserParameters());
             for(int p = 0; p < 10; p++) {
                 TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p], errs[p]);
+                
                 //create graphs of parameters for various iterations
                ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p+": " +parNames[p]+", superlayer "+(i+1),this.maxIter+1, 0.5,this.maxIter+1.5));
             }
             TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10], errs[10]);
         }
         fp.openFitPanel("fit panel", TvstrkdocasFitPars);
+        
         reLoadFitPars();
+        
+        
+        
     }
     public void loadFitPars() {
         for (int i = 0; i < this.nsl; i++) {
@@ -987,6 +1053,7 @@ public class T2DCalib extends AnalysisMonitor{
         // Fit panel
         fp = new FitPanel(this);
         fp.openFitPanel("fit panel", TvstrkdocasFitPars);
+        
     }
     private void reLoadFitPars() {
         for (int s =0; s < 6; s++) {
@@ -1015,9 +1082,9 @@ public class T2DCalib extends AnalysisMonitor{
         TableLoader.ReFill();
         
     }
-    
+
     public void Plot(int i , int j) {
-        DataLine l = new DataLine(0, 0, 1, 0);
+        DataLine l = new DataLine(0, 0, 1.5, 0);
         l.setLineStyle(2);
         l.setLineColor(2);
         if(i<2 || i>3) { // regions 1 and 3 --> no b-field
@@ -1043,9 +1110,13 @@ public class T2DCalib extends AnalysisMonitor{
                         double yf = TvstrkdocasFits.get(new Coordinate(i, j, BBins)).evaluate(g1.getDataX(ip));
                         double y = g1.getDataY(ip);
                         g2.addPoint(g1.getDataX(ip), y-yf, 0, g1.getDataEY(ip));
+                        if(iterationNum==0) {
+                            TvstrkdocasInit.get(new Coordinate(i, j, BBins)).addPoint(g1.getDataX(ip), y-yf, 0, 0);
+                        }
                     }       
                 }
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "E");
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw( TvstrkdocasInit.get(new Coordinate(i, j, BBins)), "Esame");                   
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
             }
         } else {   
@@ -1080,9 +1151,13 @@ public class T2DCalib extends AnalysisMonitor{
                             double yf = TvstrkdocasFits.get(new Coordinate(i, j, k)).evaluate(g1.getDataX(ip));
                             double y = g1.getDataY(ip);
                             g2.addPoint(g1.getDataX(ip), y-yf, 0, g1.getDataEY(ip));
+                            if(iterationNum==0) {
+                                TvstrkdocasInit.get(new Coordinate(i, j, k)).addPoint(g1.getDataX(ip), y-yf, 0, 0);
+                            }
                         }       
                     }
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "Esame");
+                    this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw( TvstrkdocasInit.get(new Coordinate(i, j, k)), "Esame");
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
                 }
             }
@@ -1234,7 +1309,6 @@ public class T2DCalib extends AnalysisMonitor{
         //this.getSegProperty(bnkHits);
         //double dmax = 2.*Constants.getInstance().wpdist[superlayer-1]; 
         //double cos30minusalpha = Math.cos(Math.toRadians(30.-util.getReducedAngle(alpha)));
-        
         return hit;
     }
     private DataBank fillTBHitsBank(DataEvent event, List<FittedHit> hitlist) {
@@ -1440,27 +1514,11 @@ public class T2DCalib extends AnalysisMonitor{
 
     }
 
-    private double getError(double a1, double sig_1, double a2, double sig_2) {
-        if(a2<0.95*a1)
-            return sig_1;
-        if(a1<0.95*a2)
-            return sig_2;
-        
-        double sig12 = sig_1*sig_1;
-        double sig22 = sig_2*sig_2;
-        
-        double A1=a1/(a1+a2);
-        double A2=a2/(a1+a2);
-        
-        double value = Math.sqrt(A1*sig12+A2*sig22);
-        if(sig_1<sig_2 && value < sig_1) value = sig_1;
-        if(sig_2<sig_1 && value < sig_2) value = sig_2;
-        
-        return value;
-    }
+    
 
     private boolean passPID(DataEvent event, DataBank bnkHits, int rowIdxinTrkBank) {
         boolean pass = false;
+        if(polarity==0) return true;
         int trkID = bnkHits.getByte("trkID", rowIdxinTrkBank);
         int pid = this.readPID(event, trkID);
         //pass if the track is identified as an electron or as a hadron

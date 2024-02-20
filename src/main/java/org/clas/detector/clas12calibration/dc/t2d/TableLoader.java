@@ -4,12 +4,15 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map; 
+import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.calt2d.FitFunction;
 import org.clas.detector.clas12calibration.dc.calt2d.T2DCalib;
+import static org.clas.detector.clas12calibration.dc.calt2d.T2DCalib.BBins;
 import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.T2DViewer;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.groot.data.GraphErrors;
+import org.jlab.groot.ui.TCanvas;
 import org.jlab.rec.dc.Constants;
 import org.jlab.utils.groups.IndexedTable;
 
@@ -19,6 +22,7 @@ public class TableLoader {
     public TableLoader() {
             // TODO Auto-generated constructor stub
     }
+    
     static final protected int nBinsT=2000;
     //public static double[][][][][] DISTFROMTIME = new double[6][6][6][6][850]; // sector slyr alpha Bfield time bins
     
@@ -37,7 +41,9 @@ public class TableLoader {
     static int[][][][] maxBinIdxT  = new int[6][6][8][6];
     public static double[][][][][][] DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][betaValues.length][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
     
-    
+    private static TCanvas TvsDBCan = new TCanvas("T2D", 1200, 800);
+    private static TCanvas TvsDBCan2 = new TCanvas("T2D Updated", 1200, 800);
+        
     private static double[][][][] T0 ;
     private static double[][][][] T0ERR ;
     public static synchronized void FillT0Tables(int run, String variation) {
@@ -127,39 +133,44 @@ public class TableLoader {
         AlphaBounds[0][0] = 0;
         AlphaBounds[5][1] = 30;
     }
-    static Map<Integer, GraphErrors> sup1 = new HashMap<Integer, GraphErrors>();
-    static Map<Integer, GraphErrors> sup2 = new HashMap<Integer, GraphErrors>();
-    static Map<Integer, GraphErrors> sup3 = new HashMap<Integer, GraphErrors>();
-    static Map<Integer, GraphErrors> sup4 = new HashMap<Integer, GraphErrors>();
-    static Map<Integer, GraphErrors> sup5 = new HashMap<Integer, GraphErrors>();
-    static Map<Integer, GraphErrors> sup6 = new HashMap<Integer, GraphErrors>();
-    public static synchronized void Fill(IndexedTable t2dPressure, IndexedTable t2dPressRef, IndexedTable pressure) {
-        for(int a = 0; a<6; a++ ){ // loop over alpha
-            sup1.put(a, new GraphErrors()); 
-            sup1.get(a).setMarkerColor(a+1);
-            sup2.put(a, new GraphErrors()); 
-            sup2.get(a).setMarkerColor(a+1);
-            sup3.put(a, new GraphErrors()); 
-            sup3.get(a).setMarkerColor(a+1);
-            sup4.put(a, new GraphErrors()); 
-            sup4.get(a).setMarkerColor(a+1);
-            sup5.put(a, new GraphErrors()); 
-            sup5.get(a).setMarkerColor(a+1);
-            sup6.put(a, new GraphErrors()); 
-            sup6.get(a).setMarkerColor(a+1);
+
+    static Map<Coordinate, GraphErrors> TvsDB = new HashMap<Coordinate, GraphErrors>();
+    static Map<Coordinate, GraphErrors> TvsDBr = new HashMap<Coordinate, GraphErrors>();
+    private static synchronized void reset(){
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+                for (int k = 0; k < BBins+1; k++) {
+                    TvsDBr.get(new Coordinate(i,j,k)).reset();
+                }
+            }
         }
-        sup1.get(0).setTitleX("time (ns)");
-        sup1.get(0).setTitleY("calc doca (cm)");
-        sup2.get(0).setTitleX("time (ns)");
-        sup2.get(0).setTitleY("calc doca (cm)");
-        sup3.get(0).setTitleX("time (ns)");
-        sup3.get(0).setTitleY("calc doca (cm)");
-        sup4.get(0).setTitleX("time (ns)");
-        sup4.get(0).setTitleY("calc doca (cm)");
-        sup5.get(0).setTitleX("time (ns)");
-        sup5.get(0).setTitleY("calc doca (cm)");
-        sup6.get(0).setTitleX("time (ns)");
-        sup6.get(0).setTitleY("calc doca (cm)");
+    }
+    
+    public static synchronized void Fill(IndexedTable t2dPressure, IndexedTable t2dPressRef, IndexedTable pressure) {
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+                for (int k = 0; k < BBins+1; k++) {
+                    
+                    TvsDB.put(new Coordinate(i,j,k), new GraphErrors());
+                    TvsDB.get(new Coordinate(i,j,k)).setMarkerColor(k+31);
+                    TvsDB.get(new Coordinate(i,j,k)).setLineColor(1);
+                    TvsDB.get(new Coordinate(i,j,k)).setLineThickness(4);
+                    TvsDB.get(new Coordinate(i,j,k)).setTitle("spl "+(i+1)+" alphaBin "+j);
+                    TvsDB.get(new Coordinate(i,j,k)).setTitleX("time (ns)");
+                    TvsDB.get(new Coordinate(i,j,k)).setTitleY("calc doca (cm)");
+                    TvsDB.get(new Coordinate(i,j,k)).setMarkerStyle(4);
+                    
+                    TvsDBr.put(new Coordinate(i,j,k), new GraphErrors());
+                    TvsDBr.get(new Coordinate(i,j,k)).setMarkerColor(k+31);
+                    TvsDBr.get(new Coordinate(i,j,k)).setLineColor(1);
+                    TvsDBr.get(new Coordinate(i,j,k)).setLineThickness(4);
+                    TvsDBr.get(new Coordinate(i,j,k)).setTitle("spl "+(i+1)+" alphaBin "+j);
+                    TvsDBr.get(new Coordinate(i,j,k)).setTitleX("time (ns)");
+                    TvsDBr.get(new Coordinate(i,j,k)).setTitleY("calc doca (cm)");
+                    TvsDBr.get(new Coordinate(i,j,k)).setMarkerStyle(4);
+                }
+            }
+        }
         //CCDBTables 0 =  "/calibration/dc/signal_generation/doca_resolution";
         //CCDBTables 1 =  "/calibration/dc/time_to_distance/t2d";
         //CCDBTables 2 =  "/calibration/dc/time_corrections/T0_correction";	
@@ -231,9 +242,17 @@ public class TableLoader {
                                 double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
                                 double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                 timebfield+=deltatime_beta;
-
+                                if(s==0 && ibeta==4) {
+                                    if(r<2||r>3) {
+                                        if(bfield==0) {
+                                            TvsDB.get(new Coordinate(r,icosalpha,8)).addPoint(x, timebfield, 0.001, 0.1);
+                                        }
+                                    } else {
+                                        TvsDB.get(new Coordinate(r,icosalpha,ibfield)).addPoint(x, timebfield, 0.001, 0.1);
+                                    }
+                                }
                                 int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-
+                                   
                                 if(tbin<0 || tbin>nBinsT-1) {
                                     //System.err.println("Problem with tbin");
                                     continue;
@@ -245,7 +264,7 @@ public class TableLoader {
                                 } else {
                                     DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]+=stepSize;
                                 }
-                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax) {
+                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax*cos30minusalpha) {
                                     DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=dmax*cos30minusalpha;
                                     idist=nxmax;
                                 }
@@ -259,7 +278,7 @@ public class TableLoader {
         fillT2DGraphs();
         System.out.println(" T2D TABLE FILLED.....");
         //testBeq1();
-        //test();
+        test();
         T2DLOADED = true;
      }
     
@@ -267,6 +286,7 @@ public class TableLoader {
     
     public static synchronized void ReFill() {
         //reset
+        reset();
         DISTFROMTIME = new double[6][6][maxBinIdxB+1][maxBinIdxAlpha+1][betaValues.length][nBinsT]; // sector slyr alpha Bfield time bins [s][r][ibfield][icosalpha][tbin]
         minBinIdxT  = 0;
         maxBinIdxT  = new int[6][6][8][6];
@@ -296,9 +316,17 @@ public class TableLoader {
                                         double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
                                         double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                         timebfield+=deltatime_beta;
-                                        
+                                        if(s==0 && ibeta==4) {
+                                            if(r<2||r>3) {
+                                                if(bfield==0) {
+                                                    TvsDBr.get(new Coordinate(r,icosalpha,8)).addPoint(x, timebfield, 0.001, 0.1);
+                                                }
+                                            } else {
+                                                TvsDBr.get(new Coordinate(r,icosalpha,ibfield)).addPoint(x, timebfield, 0.001, 0.1);
+                                            }
+                                        }
                                         int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-
+                                        
                                         if(tbin<0 || tbin>nBinsT-1) {
                                             //System.err.println("Problem with tbin");
                                             continue;
@@ -310,7 +338,10 @@ public class TableLoader {
                                         } else {
                                             DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]+=stepSize;
                                         }
-
+                                        if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax*cos30minusalpha) {
+                                            DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=dmax*cos30minusalpha;
+                                            idist=nxmax;
+                                        }
                                     }
                                 }
                             }
@@ -319,7 +350,8 @@ public class TableLoader {
         }	
         TableLoader.fillMissingTableBins();
         //TableLoader.test();
-        fillT2DGraphs();
+        //fillT2DGraphs();
+        refillT2DGraphs();
         System.out.println(" T2D TABLE RE-FILLED.....");
      }
     
@@ -341,6 +373,16 @@ public class TableLoader {
                                 if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]!=0 && DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin+1]==0) {
                                     DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin+1] = DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin];
                                 }
+//                                if(s==0 && ibeta==4) {
+//                                    if(r<2||r>3) {
+//                                        if(ibfield==0) {
+//                                            TvsDB.get(new Coordinate(r,icosalpha,8)).addPoint(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin], 2*tbin, 0.001, 2);
+//                                        }
+//                                    } else {
+//                                        TvsDB.get(new Coordinate(r,icosalpha,ibfield)).addPoint(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin], 2*tbin, 0.001, 2);
+//                                    }
+//                                    
+//                                }
                             }
                         }
                     }
@@ -349,21 +391,59 @@ public class TableLoader {
         }
     }
     public static void fillT2DGraphs() {
+        TvsDBCan.divide(2, 3);
+        for (int i = 0; i < 6; i++) {
+            
+            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+                if(i<2 || i>3) {
+                    TvsDBCan.cd(i);
+                    TvsDBCan.draw(TvsDB.get(new Coordinate(i,j,8)), "same");
+                } else {
+                    TvsDBCan.cd(i);
+                    for (int k = 1; k < BBins; k++) {
+                        TvsDBCan.draw(TvsDB.get(new Coordinate(i,j,k)), "same");
+                    } 
+                }
+            }
+        }
+    }
+     public static void refillT2DGraphs() {
+        TvsDBCan2.getPad().clear();
+        TvsDBCan2.divide(2, 3);
+        for (int i = 0; i < 6; i++) {
+            
+            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+                if(i<2 || i>3) {
+                    TvsDBCan2.cd(i);
+                    TvsDBCan2.draw(TvsDBr.get(new Coordinate(i,j,8)), "same");
+                } else {
+                    TvsDBCan2.cd(i);
+                    for (int k = 1; k < BBins; k++) {
+                        TvsDBCan2.draw(TvsDBr.get(new Coordinate(i,j,k)), "same");
+                    } 
+                }
+            }
+        }
+    }
+    public static void test() {
         TimeToDistanceEstimator t2de = new TimeToDistanceEstimator();
-        for(int r = 0; r<6; r++ ){ //loop over slys
-            for(int ibfield =0; ibfield<1; ibfield++) {
-                for(int icosalpha =0; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
+        for(int r = 3; r<4; r++ ){ //loop over slys
+            for(int ibfield =1; ibfield<2; ibfield++) {
+                for(int icosalpha =maxBinIdxAlpha; icosalpha<maxBinIdxAlpha+1; icosalpha++) {
                     double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
                     double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
                     for(int ibeta=4; ibeta<5; ibeta++) {
                         for(int tbin = 0; tbin<maxTBin; tbin++) {
-                            double time = 2*(tbin+1);
-                            double doca = DISTFROMTIME[0][r][0][icosalpha][ibeta][tbin];
-                            double calctime = calc_Time( doca,  alpha, 0, 1, r+1) ;
+                            double time = 2*tbin; 
+                            double doca = DISTFROMTIME[0][r][ibfield][icosalpha][ibeta][tbin];
+                            double calctime = calc_Time( doca,  alpha, 1, 1, r+1) ;
                             double deltatime_beta = util.getDeltaTimeBeta(doca,betaValues[ibeta],distbeta[0][r],v0[0][r]);
                             calctime+=deltatime_beta;
-                            double calcdoca = t2de.interpolateOnGrid(0, alpha, 1, time,  0, r);
-                            if(r==0 && time-calctime <4)System.out.println("alpha "+alpha+" time "+time+" calctime "+calctime+" doca "+doca+" calcdoca "+calcdoca);
+                            double calcdoca = t2de.interpolateOnGrid(1, alpha, 1, time,  0, r);
+                            if(time-calctime <4)System.out.println("alpha "+alpha+" time "+time+" time calculated from doca in T2B "+(float)calctime+" doca in T2B "+doca+" calculated doca from interp "+calcdoca);
+                            if(time-calctime <4)System.out.println("interpolation for time range[" +(time -1)+","+(time+1)+"] calculated doca from interp "+(float)t2de.interpolateOnGrid(1, alpha, 1, time-1,  0, r)+", "+
+                                    t2de.interpolateOnGrid(0, alpha, 1, time+1,  0, r));
+                            
                         }
                     }
                 }
@@ -421,4 +501,40 @@ public class TableLoader {
     public static double[][] Tmax = new double[6][6];
     public static double[][] FracDmaxAtMinVel = new double[6][6];		// fraction of dmax corresponding to the point in the cell where the velocity is minimal
 
+    
+    public static void main(String[] args) {
+//        System.setProperty("CLAS12DIR", "/Users/ziegler/BASE/Tracking/HighLumi/coatjava/coatjava/");
+//        ConstantsManager ccdb = new ConstantsManager();
+//        ccdb.init(Arrays.asList(new String[]{
+//            "/geometry/dc/superlayer",
+//            "/calibration/dc/time_to_distance/t2d_pressure", 
+//            "/hall/weather/pressure",
+//            "/calibration/dc/time_to_distance/ref_pressure",
+//            "/calibration/dc/time_jitter"}));
+//        int newRun=5700;
+//        String var = "default";
+//        Driver.init();
+//        System.out.println("* VARIATION *"+var);
+//        T2DViewer.ccdb.setVariation(var);
+//        TableLoader.Fill(ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
+//               ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
+//                ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"));  
+//        
+//        for (int i = 0; i < 6; i++) {
+//            TvsDCan.get(new Coordinate(i)).cd(0);
+//            TvsDBCan.get(new Coordinate(i)).cd(0);
+//            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+//                if(i<2 || i>3) {
+//                    TvsDCan.get(new Coordinate(i)).draw(TvsD.get(new Coordinate(i,j,8)), "same");
+//                    TvsDBCan.get(new Coordinate(i)).draw(TvsD.get(new Coordinate(i,j,8)), "same");
+//                } else {
+//                    for (int k = 1; k < BBins; k++) {
+//                        TvsDCan.get(new Coordinate(i)).draw(TvsD.get(new Coordinate(i,j,k)), "same");
+//                        TvsDBCan.get(new Coordinate(i)).draw(TvsD.get(new Coordinate(i,j,k)), "same");
+//                    } 
+//                }
+//            }
+//        }
+//                            
+    }
 }

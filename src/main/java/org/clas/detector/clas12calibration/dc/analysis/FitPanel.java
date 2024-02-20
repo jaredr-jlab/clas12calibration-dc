@@ -47,7 +47,7 @@ public class FitPanel {
     }
     
     public void openFitPanel(String title, Map<Coordinate, MnUserParameters> TvstrkdocasFitPars){
-        
+        frame    = new JFrame();
         panel = new CustomPanel2(TvstrkdocasFitPars);
         frame.setSize(350, 300); 
         frame.setTitle(title);
@@ -59,9 +59,13 @@ public class FitPanel {
     }
     public void setGreenFitButton() {
         panel.fitButton.setBackground(Color.GREEN);
+        panel.fitButton.setVisible(true);
+        panel.repaint();
     }
     public void setRedFitButton() {
         panel.fitButton.setBackground(Color.RED);
+        panel.fitButton.setVisible(true);
+        panel.repaint();
     }
     public boolean fitted = false;
     public void refit(Map<Coordinate, MnUserParameters> TvstrkdocasFitPars) throws FileNotFoundException{
@@ -122,6 +126,12 @@ public class FitPanel {
     }
     public void reset() {
         this._pM.resetPars();
+        setGreenFitButton();
+        panel.updateUI();
+        
+    }
+    public void savePars() throws FileNotFoundException {
+        this._pM.plotFits(true);
     }
     private final class CustomPanel2 extends JPanel {
         JLabel label;
@@ -133,13 +143,15 @@ public class FitPanel {
         
         JButton   fitButton = null;
         JButton   resetButton = null;
+        JButton   saveToFileButton = null;
         JButton   resButton = null;
         JButton   reCookButton = null;
         
         String[] parNames = new String[] {"v0", "vmid", "R", "tmax", "distbeta", "delBf", "b1", "b2", "b3", "b4"};
         double[][] pars = new double[10][6];
         
-        public CustomPanel2(Map<Coordinate, MnUserParameters> TvstrkdocasFitPars) {        
+        public CustomPanel2(Map<Coordinate, MnUserParameters> TvstrkdocasFitPars) { 
+            
             super(new BorderLayout());
             for(int i = 0; i < 6; i++) {
                 for(int p = 0; p<10; p++) {
@@ -192,10 +204,29 @@ public class FitPanel {
             JPanel buttonsPanel = new JPanel();
             buttonsPanel.setLayout(new GridLayout(1, 4));
 
+            saveToFileButton = new JButton("SAVE PARAMETERS");
+            saveToFileButton.setUI(new MetalButtonUI());
+            saveToFileButton.setBackground(Color.PINK);
+            saveToFileButton.setContentAreaFilled(true);
+            saveToFileButton.setOpaque(true);
+            saveToFileButton.setFont(bBold);
+            saveToFileButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        savePars();
+                    } catch (FileNotFoundException ex) {
+                        Logger.getLogger(FitPanel.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    return;
+                }
+
+                
+            });
+            
             resetButton = new JButton("RESET PARAMETERS");
             resetButton.setUI(new MetalButtonUI());
             resetButton.setBackground(Color.CYAN);
-            resetButton.setContentAreaFilled(false);
+            resetButton.setContentAreaFilled(true);
             resetButton.setOpaque(true);
             resetButton.setFont(bBold);
             resetButton.addActionListener(new ActionListener() {
@@ -226,16 +257,21 @@ public class FitPanel {
             reCookButton.setFont(bBold);
             reCookButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    fitButton.setBackground(Color.RED);
-                    fitButton.setContentAreaFilled(false);
-                    fitButton.setOpaque(true);
+                    //fitButton.setContentAreaFilled(false);
+                    //fitButton.setOpaque(true);
+                    //fitButton.setBackground(Color.RED);
+                    setRedFitButton();
                     System.out.println("******************************************");
                     System.out.println("* REFITTING SEGMENTS WITH NEW PARAMETERS *");
                     System.out.println("******************************************");
+                    
                     reCook();
                     System.out.println("******************************************");
                     System.out.println("*      READY TO REFIT THE HISTOGRAMS     *");
                     System.out.println("******************************************");
+                    
+                    setGreenFitButton();
+                    
                     return;
                 }
             });
@@ -257,18 +293,20 @@ public class FitPanel {
                 }
             });
 
+            
             buttonsPanel.add(fitButton);
             buttonsPanel.add(reCookButton);
             buttonsPanel.add(resButton);
             buttonsPanel.add(resetButton);
+            buttonsPanel.add(saveToFileButton);
 
             this.add(panel, BorderLayout.CENTER);
             this.add(buttonsPanel, BorderLayout.PAGE_END);
             
-            
             label = new JLabel("Click the \"Show it!\" button"
                            + " to bring up the selected dialog.",
                            JLabel.CENTER);
+            
         }
         private Font bBold = new Font("Arial", Font.BOLD, 16);
         void setLabel(String newText) {

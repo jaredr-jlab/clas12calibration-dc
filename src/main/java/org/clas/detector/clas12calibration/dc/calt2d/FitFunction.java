@@ -56,12 +56,13 @@ public class FitFunction implements FCNBase{
     public static double polyFcnMac(double x, double alpha, double bfield, double v_0, double vm, double R, 
             double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4, int superlayer) {
         
-        if(x>dmax)
-            x=dmax;
+        
         double time = 0;
         // alpha correction 
         double cos30minusalpha=Math.cos(Math.toRadians(30.-alpha));
         double dmaxalpha = dmax*cos30minusalpha;
+        if(x>dmaxalpha)
+            x=dmaxalpha;
         double xhatalpha = x/dmaxalpha;
         //   rcapital is an intermediate parameter
         double rcapital = R*dmax;
