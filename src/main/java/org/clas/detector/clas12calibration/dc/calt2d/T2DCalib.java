@@ -311,6 +311,13 @@ public class T2DCalib extends AnalysisMonitor{
             Logger.getLogger(T2DCalib.class.getName()).log(Level.SEVERE, null, ex);
         }
         this.plotHistos();
+        
+        for (int i = 0; i < this.nsl; i++) {
+            for (int j = 0; j < this.alphaBins; j++) {
+                this.Plot(i,j);
+            }
+        }
+        
     }
     public void plotFits(boolean fitted) throws FileNotFoundException {
         if(fitted==true) {
@@ -435,6 +442,7 @@ public class T2DCalib extends AnalysisMonitor{
             }
             pw.close();
             pw2.close();
+            pw3.close();
             //this.rePlotResi();
         }
     }
@@ -476,7 +484,7 @@ public class T2DCalib extends AnalysisMonitor{
                 TvstrkdocasFitPars.get(new Coordinate(i)),1);
         migrad.setCheckAnalyticalDerivatives(true);
         
-        FunctionMinimum min ;
+        FunctionMinimum min = null ;
         
         
         for(int it = 0; it<maxIter; it++) {
@@ -493,15 +501,15 @@ public class T2DCalib extends AnalysisMonitor{
             }
             
             
-            System.err.println(min);
+            //System.err.println(min);
             
-            if(it==maxIter-1) {
-                System.out.println("FINAL FIT MINUIT ");
-                String s = String.valueOf(min);  System.out.println(s);
-                pw3.print(s);
-            }
+            
         }
-        
+        if(min!=null) {
+            System.out.println("FINAL FIT MINUIT for superlayer "+(i+1));
+            String s = String.valueOf(min);  System.out.println(s);
+            pw3.println(s);
+        }
 //        for(int isec = 0; isec < 6; isec++) {
 //           
 //            pw.printf("%d\t %d\t %d\t %.6f\t %d\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %d\t %.6f\t %.6f\t %d\n",
@@ -663,7 +671,6 @@ public class T2DCalib extends AnalysisMonitor{
         for (int i = 0; i < this.nsl; i++) {
             for (int j = 0; j < this.alphaBins; j++) {
                 this.filltrkDocavsTGraphs(i,j);
-              
             }
         }
         System.out.println("RECOOKING DONE WITH THE NEW CONSTANTS!");

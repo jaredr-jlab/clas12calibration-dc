@@ -6,12 +6,13 @@ import java.util.HashMap;
 import java.util.Map; 
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.calt2d.FitFunction;
+import org.clas.detector.clas12calibration.dc.calt2d.FitLine;
 import org.clas.detector.clas12calibration.dc.calt2d.T2DCalib;
 import static org.clas.detector.clas12calibration.dc.calt2d.T2DCalib.BBins;
 import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.T2DViewer;
+import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
-import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.ui.TCanvas;
 import org.jlab.rec.dc.Constants;
 import org.jlab.utils.groups.IndexedTable;
@@ -134,43 +135,87 @@ public class TableLoader {
         AlphaBounds[5][1] = 30;
     }
 
-    static Map<Coordinate, GraphErrors> TvsDB = new HashMap<Coordinate, GraphErrors>();
-    static Map<Coordinate, GraphErrors> TvsDBr = new HashMap<Coordinate, GraphErrors>();
-    private static synchronized void reset(){
+    static Map<Coordinate, FitLine> TvsDB = new HashMap<Coordinate, FitLine>();
+    static Map<Coordinate, FitLine> TvsDBr = new HashMap<Coordinate, FitLine>();
+    //FitLine(String name, int i, int j, int k, MnUserParameters pars)
+    static String[] parNames = {"v0", "vmid", "R", "tmax", "distbeta", "delBf", 
+        "b1", "b2", "b3", "b4", "dmax"};
+    static double[] errs = {0.001,0.001,0.01,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
+    
+    private static synchronized void fitsinit(){
         for (int i = 0; i < 6; i++) {
-            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+            double[] pars = new double[11];
+            pars[0] = TableLoader.v0[0][i];
+            pars[1] = TableLoader.vmid[0][i];
+            pars[2] = TableLoader.FracDmaxAtMinVel[0][i];
+            pars[3] = TableLoader.Tmax[0][i];
+            pars[4] = TableLoader.distbeta[0][i];
+            pars[5] = TableLoader.delta_bfield_coefficient[0][i];
+            pars[6] = TableLoader.b1[0][i];
+            pars[7] = TableLoader.b2[0][i];
+            pars[8] = TableLoader.b3[0][i];
+            pars[9] = TableLoader.b4[0][i];
+            pars[10] = 2.*Constants.getInstance().wpdist[i];//fix dmax
+            MnUserParameters mnp = new MnUserParameters();
+            
+            for(int p = 0; p < 10; p++) {
+                mnp.add(parNames[p], pars[p], errs[p]);
+            }
+            mnp.add(parNames[10], pars[10], errs[10]);
+            for (int j = 0; j < T2DCalib.alphaBins; j++) {
                 for (int k = 0; k < BBins+1; k++) {
-                    TvsDBr.get(new Coordinate(i,j,k)).reset();
+                    TvsDB.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                                mnp));
+                    TvsDB.get(new Coordinate(i, j, k)).setLineWidth(2);
+                    TvsDB.get(new Coordinate(i, j, k)).setLineColor(k+1);
+                    TvsDB.get(new Coordinate(i, j, k)).setRange(0, pars[10]);            
+                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                               mnp));
+                    TvsDBr.get(new Coordinate(i, j, k)).setLineWidth(2);
+                    TvsDBr.get(new Coordinate(i, j, k)).setLineColor(k+1);
+                    TvsDBr.get(new Coordinate(i, j, k)).setRange(0, pars[10]);            
                 }
             }
         }
+        
+    }
+    private static synchronized void reset(){
+        TvsDBr.clear();
+        for (int i = 0; i < 6; i++) {
+            double[] pars = new double[11];
+            pars[0] = TableLoader.v0[0][i];
+            pars[1] = TableLoader.vmid[0][i];
+            pars[2] = TableLoader.FracDmaxAtMinVel[0][i];
+            pars[3] = TableLoader.Tmax[0][i];
+            pars[4] = TableLoader.distbeta[0][i];
+            pars[5] = TableLoader.delta_bfield_coefficient[0][i];
+            pars[6] = TableLoader.b1[0][i];
+            pars[7] = TableLoader.b2[0][i];
+            pars[8] = TableLoader.b3[0][i];
+            pars[9] = TableLoader.b4[0][i];
+            pars[10] = 2.*Constants.getInstance().wpdist[i];//fix dmax
+            MnUserParameters mnp = new MnUserParameters();
+            
+            for(int p = 0; p < 10; p++) {
+                mnp.add(parNames[p], pars[p], errs[p]);
+            }
+            mnp.add(parNames[10], pars[10], errs[10]);
+            for (int j = 0; j < T2DCalib.alphaBins; j++) {
+                for (int k = 0; k < BBins+1; k++) {
+                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                               mnp));
+                    TvsDBr.get(new Coordinate(i, j, k)).setRange(0, pars[10]);
+                    TvsDBr.get(new Coordinate(i, j, k)).setLineWidth(2);
+                    TvsDBr.get(new Coordinate(i, j, k)).setLineColor(k+1);
+                }
+            }
+        }
+        
     }
     
+    
     public static synchronized void Fill(IndexedTable t2dPressure, IndexedTable t2dPressRef, IndexedTable pressure) {
-        for (int i = 0; i < 6; i++) {
-            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
-                for (int k = 0; k < BBins+1; k++) {
-                    
-                    TvsDB.put(new Coordinate(i,j,k), new GraphErrors());
-                    TvsDB.get(new Coordinate(i,j,k)).setMarkerColor(k+31);
-                    TvsDB.get(new Coordinate(i,j,k)).setLineColor(1);
-                    TvsDB.get(new Coordinate(i,j,k)).setLineThickness(4);
-                    TvsDB.get(new Coordinate(i,j,k)).setTitle("spl "+(i+1)+" alphaBin "+j);
-                    TvsDB.get(new Coordinate(i,j,k)).setTitleX("time (ns)");
-                    TvsDB.get(new Coordinate(i,j,k)).setTitleY("calc doca (cm)");
-                    TvsDB.get(new Coordinate(i,j,k)).setMarkerStyle(4);
-                    
-                    TvsDBr.put(new Coordinate(i,j,k), new GraphErrors());
-                    TvsDBr.get(new Coordinate(i,j,k)).setMarkerColor(k+31);
-                    TvsDBr.get(new Coordinate(i,j,k)).setLineColor(1);
-                    TvsDBr.get(new Coordinate(i,j,k)).setLineThickness(4);
-                    TvsDBr.get(new Coordinate(i,j,k)).setTitle("spl "+(i+1)+" alphaBin "+j);
-                    TvsDBr.get(new Coordinate(i,j,k)).setTitleX("time (ns)");
-                    TvsDBr.get(new Coordinate(i,j,k)).setTitleY("calc doca (cm)");
-                    TvsDBr.get(new Coordinate(i,j,k)).setMarkerStyle(4);
-                }
-            }
-        }
+        
         //CCDBTables 0 =  "/calibration/dc/signal_generation/doca_resolution";
         //CCDBTables 1 =  "/calibration/dc/time_to_distance/t2d";
         //CCDBTables 2 =  "/calibration/dc/time_corrections/T0_correction";	
@@ -242,15 +287,7 @@ public class TableLoader {
                                 double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
                                 double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                 timebfield+=deltatime_beta;
-                                if(s==0 && ibeta==4) {
-                                    if(r<2||r>3) {
-                                        if(bfield==0) {
-                                            TvsDB.get(new Coordinate(r,icosalpha,8)).addPoint(x, timebfield, 0.001, 0.1);
-                                        }
-                                    } else {
-                                        TvsDB.get(new Coordinate(r,icosalpha,ibfield)).addPoint(x, timebfield, 0.001, 0.1);
-                                    }
-                                }
+                                
                                 int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
                                    
                                 if(tbin<0 || tbin>nBinsT-1) {
@@ -316,15 +353,7 @@ public class TableLoader {
                                         double timebfield = calc_Time( x,  alpha, bfield, s+1, r+1) ;
                                         double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                         timebfield+=deltatime_beta;
-                                        if(s==0 && ibeta==4) {
-                                            if(r<2||r>3) {
-                                                if(bfield==0) {
-                                                    TvsDBr.get(new Coordinate(r,icosalpha,8)).addPoint(x, timebfield, 0.001, 0.1);
-                                                }
-                                            } else {
-                                                TvsDBr.get(new Coordinate(r,icosalpha,ibfield)).addPoint(x, timebfield, 0.001, 0.1);
-                                            }
-                                        }
+                                        
                                         int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
                                         
                                         if(tbin<0 || tbin>nBinsT-1) {
@@ -391,10 +420,11 @@ public class TableLoader {
         }
     }
     public static void fillT2DGraphs() {
+        fitsinit();
         TvsDBCan.divide(2, 3);
         for (int i = 0; i < 6; i++) {
             
-            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+            for (int j = 0; j < T2DCalib.alphaBins; j++) {
                 if(i<2 || i>3) {
                     TvsDBCan.cd(i);
                     TvsDBCan.draw(TvsDB.get(new Coordinate(i,j,8)), "same");
@@ -408,11 +438,12 @@ public class TableLoader {
         }
     }
      public static void refillT2DGraphs() {
+         reset();
         TvsDBCan2.getPad().clear();
         TvsDBCan2.divide(2, 3);
         for (int i = 0; i < 6; i++) {
             
-            for (int j = 0; j < maxBinIdxAlpha+1; j++) {
+            for (int j = 0; j < T2DCalib.alphaBins; j++) {
                 if(i<2 || i>3) {
                     TvsDBCan2.cd(i);
                     TvsDBCan2.draw(TvsDBr.get(new Coordinate(i,j,8)), "same");
