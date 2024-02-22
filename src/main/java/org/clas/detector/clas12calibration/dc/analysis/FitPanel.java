@@ -95,7 +95,7 @@ public class FitPanel {
                 //        this.pars.get(i)*0.8-0.1,this.pars.get(i)*1.2+0.1);
             }
         }
-        
+        this._pM.initFitParsToFile();
         for(int j = 0; j<6; j++) {
             for(int i=0; i<npar; i++){ 
                 System.out.println("j "+j+" par "+this.pars.get(j).get(i));
@@ -115,6 +115,7 @@ public class FitPanel {
         }
         fitted = true;
         this._pM.plotFits(fitted);
+        this._pM.pw3.close();
     }
     
     
@@ -259,8 +260,9 @@ public class FitPanel {
                 public void actionPerformed(ActionEvent e) {
                     //fitButton.setContentAreaFilled(false);
                     //fitButton.setOpaque(true);
-                    //fitButton.setBackground(Color.RED);
-                    setRedFitButton();
+                    //setRedFitButton();
+                    fitButton.setBackground(Color.RED);
+                    
                     System.out.println("******************************************");
                     System.out.println("* REFITTING SEGMENTS WITH NEW PARAMETERS *");
                     System.out.println("******************************************");
@@ -270,8 +272,8 @@ public class FitPanel {
                     System.out.println("*      READY TO REFIT THE HISTOGRAMS     *");
                     System.out.println("******************************************");
                     
-                    setGreenFitButton();
-                    
+                    //setGreenFitButton();
+                    fitButton.setBackground(Color.GREEN);
                     return;
                 }
             });

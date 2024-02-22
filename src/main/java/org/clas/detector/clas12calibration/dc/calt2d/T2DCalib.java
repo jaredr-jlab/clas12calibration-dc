@@ -67,7 +67,7 @@ public class T2DCalib extends AnalysisMonitor{
     public FitPanel fp;
     PrintWriter pw = null;
     PrintWriter pw2 = null;
-    PrintWriter pw3 = null;
+    public PrintWriter pw3 = null;
     File outfile = null;
     private int runNumber;
     private Utilities util = new Utilities();
@@ -76,7 +76,8 @@ public class T2DCalib extends AnalysisMonitor{
     
     public T2DCalib(String name, ConstantsManager ccdb) throws FileNotFoundException {
         super(name, ccdb);
-        this.setAnalysisTabNames("TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi", "CalcDoca vs T","Time Residuals","Parameters");
+        this.setAnalysisTabNames("TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi", 
+                "CalcDoca vs T","Time Residuals","Parameters", "Fit Function");
         this.init(false, "v0:vmid:R:tmax:distbeta:delBf:b1:b2:b3:b4");
         
         String dir = ClasUtilsFile.getResourceDir("CLAS12DIR", "etc/bankdefs/hipo4");
@@ -113,7 +114,7 @@ public class T2DCalib extends AnalysisMonitor{
     private Map<Coordinate, H2F> Tvstrkdocas                = new HashMap<Coordinate, H2F>();
     private Map<Coordinate, H2F> Tvscalcdocas               = new HashMap<Coordinate, H2F>();
     private Map<Coordinate, GraphErrors> TvstrkdocasProf    = new HashMap<Coordinate, GraphErrors>();
-    private Map<Coordinate, GraphErrors> TvstrkdocasInit    = new HashMap<Coordinate, GraphErrors>();
+    private final Map<Coordinate, GraphErrors> TvstrkdocasInit    = new HashMap<Coordinate, GraphErrors>();
     private Map<Coordinate, FitFunction> TvstrkdocasFit             = new HashMap<Coordinate, FitFunction>();
     public Map<Coordinate, MnUserParameters> TvstrkdocasFitPars    = new HashMap<Coordinate, MnUserParameters>();
     public  Map<Coordinate, FitLine> TvstrkdocasFits                = new HashMap<Coordinate, FitLine>();
@@ -249,7 +250,8 @@ public class T2DCalib extends AnalysisMonitor{
     }    
     @Override
     public void plotHistos() {
-        String[] Names = {"TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi","CalcDoca vs T","Time Residuals","Parameters"};
+        String[] Names = {"TrackDoca vs T","TrackDoca vs T Graphs","TrackDoca vs T Fit Resi","CalcDoca vs T","Time Residuals","Parameters",
+                            "Fit Function"};
         for(int s = 0; s<3; s++) {
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridX(false);
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridY(false);
@@ -267,12 +269,15 @@ public class T2DCalib extends AnalysisMonitor{
         this.getAnalysisCanvas().getCanvas(Names[4]).divide(this.nsl, 2);
         this.getAnalysisCanvas().getCanvas(Names[5]).divide(6, 6);
         
+        this.getAnalysisCanvas().getCanvas(Names[6]).divide(4, 3);
+        
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").update();
         this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").update();
         this.getAnalysisCanvas().getCanvas("CalcDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("Time Residuals").update();
         this.getAnalysisCanvas().getCanvas("Parameters").update();
+        this.getAnalysisCanvas().getCanvas("Fit Function").update();
     }
     @Override
     public void timerUpdate() {
@@ -281,48 +286,50 @@ public class T2DCalib extends AnalysisMonitor{
     @Override
     public void analysis() {
         
-        calwriter.close();
-        writer.close();
-        this.UpdateBBinCenters();
-        
-            
-        for (int i = 0; i < this.nsl; i++) {
-            for (int j = 0; j < this.alphaBins; j++) {
-                this.filltrkDocavsTGraphs(i,j);
-            }
-            //runFit(i); 
-        }
-        reLoadFitPars();
-        
-        //fp.refit();
-        //pw.close();
-        this.getAnalysisCanvas().getCanvas("Time Residuals").divide(nsl, 3);
-        //
-        for(int i = 0; i<this.nsl; i++) {
-            this.runInitFit(i);
-            this.getAnalysisCanvas().getCanvas("Time Residuals").cd(i);
-            this.fitTimeResPlot(timeResiFromFile.get(new Coordinate(i)), 
-                    this.getAnalysisCanvas().getCanvas("Time Residuals"));
-        }
-        fp.setGreenFitButton();
         try {
+            calwriter.close();
+            writer.close();
+            this.UpdateBBinCenters();
+            
+            
+            for (int i = 0; i < this.nsl; i++) {
+                for (int j = 0; j < this.alphaBins; j++) {
+                    this.filltrkDocavsTGraphs(i,j);
+                }
+                //runFit(i);
+            }
+            System.out.println("ANALYSIS");
+            reLoadFitPars();
+            
+            //fp.refit();
+            //pw.close();
+            this.getAnalysisCanvas().getCanvas("Time Residuals").divide(nsl, 3);
+            //
+            for(int i = 0; i<this.nsl; i++) {
+                this.runInitFit(i);
+                this.getAnalysisCanvas().getCanvas("Time Residuals").cd(i);
+                this.fitTimeResPlot(timeResiFromFile.get(new Coordinate(i)),
+                        this.getAnalysisCanvas().getCanvas("Time Residuals"));
+            }
+            System.out.println("INITIAL FIT DONE");
+            fp.setGreenFitButton();
             this.plotFits(true);
+            
+            System.out.println("PLOT FITS DONE");
+            this.plotHistos();
+            System.out.println("ANALYSIS Done plotHistos");
+            for (int i = 0; i < this.nsl; i++) {
+                for (int j = 0; j < this.alphaBins; j++) {
+                    this.Plot(i,j); System.out.println(",...............plot "+i+"; "+j);
+                }
+            }
+            System.out.println("ANALYSIS Done ....");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(T2DCalib.class.getName()).log(Level.SEVERE, null, ex);
         }
-        this.plotHistos();
-        
-        for (int i = 0; i < this.nsl; i++) {
-            for (int j = 0; j < this.alphaBins; j++) {
-                this.Plot(i,j);
-            }
-        }
-        
     }
     public void plotFits(boolean fitted) throws FileNotFoundException {
         if(fitted==true) {
-            
-           
             DateFormat df = new SimpleDateFormat("MM-dd-yyyy_hh.mm.ss_aa");
             String fileName = "Files/ccdb_run" + this.runNumber + "time_" 
                     + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
@@ -330,14 +337,12 @@ public class T2DCalib extends AnalysisMonitor{
             String fileName2 = "Files/parameteranderror_run" + this.runNumber + "time_" 
                     + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
            
-            String fileName3 = "Files/minuit_run" + this.runNumber + "time_" 
-                    + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
+            
             
             pw = new PrintWriter(fileName);
             pw.printf("#& sector superlayer component v0 deltanm tmax distbeta delta_bfield_coefficient b1 b2 b3 b4 delta_T0 c1 c2 c3\n");
             pw2 = new PrintWriter(fileName2);
             pw2.printf("#& sector superlayer component v0 +/-v0 tmax +/-tmax vmid +/-vmid delta_bf +/-delta_bf distbeta +/-distbeta \n");
-            pw3 = new PrintWriter(fileName3);
             
             int ij =0;
             int ip =0;
@@ -370,7 +375,6 @@ public class T2DCalib extends AnalysisMonitor{
             for (int i = 0; i < this.nsl; i++) {
 
                 for (int j = 0; j < this.alphaBins; j++) {
-
                     if(i<2 || i>3) {
                         if(TvstrkdocasProf.get(new Coordinate(i, j, BBins)).getVectorX().size()>0) {
                             this.updateTable(i,j);
@@ -440,9 +444,8 @@ public class T2DCalib extends AnalysisMonitor{
                     
                 }
             }
-            pw.close();
-            pw2.close();
-            pw3.close();
+            pw.close(); 
+            pw2.close(); 
             //this.rePlotResi();
         }
     }
@@ -459,6 +462,12 @@ public class T2DCalib extends AnalysisMonitor{
                 new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
         
     }
+    public void initFitParsToFile() throws FileNotFoundException {
+        DateFormat df = new SimpleDateFormat("MM-dd-yyyy_hh.mm.ss_aa");
+        String fileName3 = "Files/minuit_run" + this.runNumber + "time_" 
+                    + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
+        pw3 = new PrintWriter(fileName3);
+    }
     public void runFit(int i, boolean fixFit[][]) {
         // i = superlayer - 1;
         System.out.println(" **************** ");
@@ -471,6 +480,15 @@ public class T2DCalib extends AnalysisMonitor{
                 TvstrkdocasFitPars.get(new Coordinate(i)),2);
 	
         scanner.fix(10);
+        //v0
+        scanner.setLimits(0, 0.002, 0.009);
+        //vmid
+        scanner.setLimits(1, 0.001, 0.005);
+        //R
+        scanner.setLimits(2, 0.6, 0.72);
+        //distbeta
+        scanner.setLimits(4, 0.02, 0.1);
+        
         for (int p = 0; p < 10; p++) {
             if(fixFit[p][i]==true) {
                 scanner.fix(p); 
@@ -490,11 +508,11 @@ public class T2DCalib extends AnalysisMonitor{
         for(int it = 0; it<maxIter; it++) {
             
             min = migrad.minimize();
-            System.err.println("****************************************************");
-            System.err.println("*   FIT RESULTS  FOR SUPERLAYER  "+(i+1)+" at iteration "+(it+1)+"  *");
-            System.err.println("****************************************************");  
-            for(int pi = 0; pi<6; pi++) 
-                System.out.println("par["+pi+"]="+(TvstrkdocasFitPars.get(new Coordinate(i)).value(pi)-min.userParameters().value(pi)));
+           // System.err.println("****************************************************");
+           // System.err.println("*   FIT RESULTS  FOR SUPERLAYER  "+(i+1)+" at iteration "+(it+1)+"  *");
+           // System.err.println("****************************************************");  
+           // for(int pi = 0; pi<6; pi++) 
+           //     System.out.println("par["+pi+"]="+(TvstrkdocasFitPars.get(new Coordinate(i)).value(pi)-min.userParameters().value(pi)));
             
             if(min.isValid()) {
                 TvstrkdocasFitPars.put(new Coordinate(i),min.userParameters());  
@@ -506,29 +524,15 @@ public class T2DCalib extends AnalysisMonitor{
             
         }
         if(min!=null) {
-            System.out.println("FINAL FIT MINUIT for superlayer "+(i+1));
+            String t = "FINAL MINUIT FIT RESULT FOR SUPERLAYER ";
+            t+=(i+1);
+            t+=" :";
+            System.out.println(t);
             String s = String.valueOf(min);  System.out.println(s);
+            pw3.println(t);
             pw3.println(s);
         }
-//        for(int isec = 0; isec < 6; isec++) {
-//           
-//            pw.printf("%d\t %d\t %d\t %.6f\t %d\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %.6f\t %d\t %.6f\t %.6f\t %d\n",
-//                (isec+1), (i+1), 0,
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(0),
-//                0,
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(3),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(4),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(5),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(6),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(7),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(8),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(9),
-//                0,
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(2),
-//                TvstrkdocasFitPars.get(new Coordinate(i)).value(1),
-//                0);
-//        }
-        
+
         //release all so they can be fixed again
         TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
         for (int p = 0; p < 10; p++) {
@@ -668,15 +672,18 @@ public class T2DCalib extends AnalysisMonitor{
                 }
             }
         }
+        System.out.println("REMAKING PROFILES");
         for (int i = 0; i < this.nsl; i++) {
             for (int j = 0; j < this.alphaBins; j++) {
                 this.filltrkDocavsTGraphs(i,j);
+                System.out.println("PROFILE "+i+" "+j+" is OK!");
             }
         }
         System.out.println("RECOOKING DONE WITH THE NEW CONSTANTS!");
         System.out.println("CHECK THE RESIDUALS!");
         calreader.close();
         fp.setGreenFitButton();
+        
     }
     public void rePlotResi() {
         
@@ -790,23 +797,22 @@ public class T2DCalib extends AnalysisMonitor{
     F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
     F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
     private void filltrkDocavsTGraphs(int i, int j, int k) {
-        
         if(TvstrkdocasProf.get(new Coordinate(i, j, k))!=null) {
             TvstrkdocasProf.get(new Coordinate(i, j, k)).reset();
-            H2F h2 = Tvstrkdocas.get(new Coordinate(i, j, k));
-            ArrayList<H1F> hslice = h2.getSlicesX();
             
+            H2F h2 = Tvstrkdocas.get(new Coordinate(i, j, k));
+            
+            ArrayList<H1F> hslice = h2.getSlicesX();
             for(int si=0; si<hslice.size(); si++) {
                 double amp   = hslice.get(si).getBinContent(hslice.get(si).getMaximumBin());
                 double meanh = hslice.get(si).getDataX(hslice.get(si).getMaximumBin());
                 if(hslice.get(si).getMean()==0 || amp<this.MINENTRIES) {
-               
+                    
                 } else {
                     double mean = hslice.get(si).getMean();
                     double x = h2.getXAxis().getBinCenter(si);
                     double y = hslice.get(si).getMean();
                     double sigma = hslice.get(si).getRMS(); 
-                    
 //                    if(x/(2.*Constants.getInstance().wpdist[i])>0.1) { // for large docas (90% of dmax take fit with a double gauss and take the peak of the one at smaller distance as y
 //                        f2.setParameter(0, amp);
 //                        f2.setParameter(1, mean);
@@ -832,14 +838,19 @@ public class T2DCalib extends AnalysisMonitor{
                         f1.setParameter(1, mean);
                         f1.setParameter(2, sigma);
                         f1.setParameter(3, 0);
-                        sigma = f1.getParameter(2);
+                        f1.setParLimits(0, amp-1, amp+10);
+                        f1.setParLimits(1, min, max);
                         
-                        DataFitter.fit(f1, hslice.get(si),"Q"); //No options uses error for sigma 
-
-                        if(f1.getChiSquare()<200 && f1.getParameter(1)>0
+                        //TvstrkdocasProf.get(new Coordinate(i, j, k)).
+                        //            addPoint(x, f1.getParameter(1), 0, sigma);
+                        
+                        DataFitter.fit(f1, hslice.get(si),"LQ"); //No options uses error for sigma 
+                        
+                        if(f1.isFitValid() && f1.getChiSquare()<200 && f1.getParameter(1)>0
                                 && x<2.*Constants.getInstance().wpdist[i] 
                                 && f1.parameter(1).error()<50
                                 && Math.abs(meanh-f1.getParameter(1))<sigma && f1.getParameter(1)>0) {
+                            //sigma = f1.getParameter(2);
                             TvstrkdocasProf.get(new Coordinate(i, j, k)).
                                     addPoint(x, f1.getParameter(1), 0, sigma);
                         }
@@ -898,6 +909,7 @@ public class T2DCalib extends AnalysisMonitor{
             String newVar = String.valueOf(T2DViewer.calVariation.getSelectedItem());
             System.out.println("* VARIATION *"+newVar);
             ccdb.setVariation(newVar);
+            TableLoader.t2dc=this;
             TableLoader.FillT0Tables(newRun, newVar);
             TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
                     T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
@@ -1008,7 +1020,7 @@ public class T2DCalib extends AnalysisMonitor{
     private double[][] resetPars = new double[6][11];
     private String[] parNames = {"v0", "vmid", "R", "tmax", "distbeta", "delBf", 
         "b1", "b2", "b3", "b4", "dmax"};
-    private double[] errs = {0.001,0.001,0.01,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
+    private double[] errs = {0.0001,0.0001,0.001,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
     
     public void resetPars() {
         TvstrkdocasFitPars.clear();
@@ -1091,7 +1103,7 @@ public class T2DCalib extends AnalysisMonitor{
     }
 
     public void Plot(int i , int j) {
-        DataLine l = new DataLine(0, 0, 1.5, 0);
+        DataLine l = new DataLine(0, 0, 2.5, 0);
         l.setLineStyle(2);
         l.setLineColor(2);
         if(i<2 || i>3) { // regions 1 and 3 --> no b-field
@@ -1123,7 +1135,7 @@ public class T2DCalib extends AnalysisMonitor{
                     }       
                 }
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "E");
-                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw( TvstrkdocasInit.get(new Coordinate(i, j, BBins)), "Esame");                   
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(TvstrkdocasInit.get(new Coordinate(i, j, BBins)), "Esame");                   
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
             }
         } else {   
@@ -1164,7 +1176,7 @@ public class T2DCalib extends AnalysisMonitor{
                         }       
                     }
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "Esame");
-                    this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw( TvstrkdocasInit.get(new Coordinate(i, j, k)), "Esame");
+                    this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(TvstrkdocasInit.get(new Coordinate(i, j, k)), "Esame");
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
                 }
             }
@@ -1572,8 +1584,8 @@ public class T2DCalib extends AnalysisMonitor{
                     && beta< Double.parseDouble(T2DViewer.betaCut2.getText()) 
                     && this.selectOnAlpha(superlayer, alphaRadUncor)==true
                     && bnkHits.getFloat("TFlight", i)>0 
-                    //&& segPropMap.get(bnkHits.getInt("clusterID", i)).getNumWireWithinDW()<=Integer.parseInt(T2DViewer.npassWires.getText())
-                    //&& segPropMap.get(bnkHits.getInt("clusterID", i)).getSize()>Integer.parseInt(T2DViewer.nWires.getText())
+                    && segPropMap.get(bnkHits.getInt("clusterID", i)).getNumWireWithinDW()<=Integer.parseInt(T2DViewer.npassWires.getText())
+                    && segPropMap.get(bnkHits.getInt("clusterID", i)).getSize()>Integer.parseInt(T2DViewer.nWires.getText())
                     && Math.abs(bnkHits.getFloat("fitResidual", i))<0.0001*Double.parseDouble(T2DViewer.fitresiCut.getText()) 
                     && this.passPID(event, bnkHits, i)==true
                 )

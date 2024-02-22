@@ -40,16 +40,19 @@ public class Utilities {
         return Math.toDegrees(ralpha);
     }  
 
-    public double getDeltaTimeBeta(double x, double beta, double distbeta, double v_0) {
+    public double getDeltaTimeBeta(double xo, double beta, double distbeta, double v_0) {
         /*
         double dtbscl = 0.5*(x/Math.sqrt(x*x+T2DCalib.DBF)+1);
        // dtbscl = 0.1;
         double dtb0 =(Math.sqrt(x * x + (distbeta * beta * beta) * (distbeta* beta * beta)) - x) / v_0;
-       // double dtb0 =(Math.sqrt(x * x + (distbeta * beta * beta) * (distbeta* beta * beta)) - x) / Constants.V0AVERAGED;
         double dtb = dtbscl*dtb0;
         return dtb;
         */
+        
+        ////double a = beta*beta*distbeta*Math.pow(0.5, 1/3); 
+        double x = xo;
         double value = (0.5*Math.pow(beta*beta*distbeta,3)*x/(Math.pow(beta*beta*distbeta,3)+x*x*x))/v_0;
+        
         return value;
     }
     

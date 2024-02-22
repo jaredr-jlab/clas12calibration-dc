@@ -17,7 +17,7 @@ public class FitLine extends Func1D{
     public int k;
     private FitFunction fc ;
     private Utilities util = new Utilities();
-    
+    public boolean useMidBfieldBin=false;
     public FitLine() {
         super("fcn", 0.0, 2.0);
         fc = new FitFunction();
@@ -45,10 +45,13 @@ public class FitLine extends Func1D{
         //local angle correction
         double alpha = T2DCalib.AlphaValues[j];
         if(this.i>1 && this.i<4) {
-            double theta0 = Math.toDegrees(Math.acos(1-0.02*T2DCalib.BfieldValuesUpd[i-2][j][k]));
+            B = T2DCalib.BfieldValuesUpd[i-2][j][k];
+            if(useMidBfieldBin)
+                 B=T2DCalib.BfieldValues[k]; 
+            double theta0 = Math.toDegrees(Math.acos(1-0.02*B));
             // correct alpha with theta0, the angle corresponding to the isochrone lines twist due to the electric field
             alpha-=(double)T2DCalib.polarity*theta0;
-            B = T2DCalib.BfieldValuesUpd[i-2][j][k];
+           
         }
         //reduce the corrected angle
         double ralpha = (double) util.getReducedAngle(alpha); 
@@ -68,7 +71,6 @@ public class FitLine extends Func1D{
 
         calcTime = fc.polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
             tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1)+ deltatime_beta ;
-        
         //System.out.println("ijk "+i+""+j+""+k+" b "+(float)T2DCalib.BfieldValues[k]+" ralpha "+(float)ralpha+" x "+x+" time "+(float)calcTime);
         return calcTime;
     }

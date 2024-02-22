@@ -629,7 +629,7 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         c.gridy = y;
         trPanel.add(new JLabel("nwires_wi_ave <= ", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        npassWires.setText("9");
+        npassWires.setText("20");
         npassWires.addActionListener(this);
         tgmPanel.add(npassWires);
         c.gridx = 1;
@@ -641,7 +641,7 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         c.gridy = y;
         trPanel.add(new JLabel("deltaWire = ", JLabel.LEADING),c);
         tgmPanel = new JPanel();
-        deltaWire.setText("9");
+        deltaWire.setText("20");
         deltaWire.addActionListener(this);
         tgmPanel.add(deltaWire);
         c.gridx = 1;
