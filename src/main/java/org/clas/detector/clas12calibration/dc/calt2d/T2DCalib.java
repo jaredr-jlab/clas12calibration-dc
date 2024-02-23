@@ -298,7 +298,7 @@ public class T2DCalib extends AnalysisMonitor{
                 }
                 //runFit(i);
             }
-            System.out.println("ANALYSIS");
+            
             reLoadFitPars();
             
             //fp.refit();
@@ -311,16 +311,16 @@ public class T2DCalib extends AnalysisMonitor{
                 this.fitTimeResPlot(timeResiFromFile.get(new Coordinate(i)),
                         this.getAnalysisCanvas().getCanvas("Time Residuals"));
             }
-            System.out.println("INITIAL FIT DONE");
-            fp.setGreenFitButton();
+           
+            //fp.setGreenFitButton();
             this.plotFits(true);
             
-            System.out.println("PLOT FITS DONE");
+            System.out.println("PLOTS WITH CCDB CONSTANTS DONE");
             this.plotHistos();
-            System.out.println("ANALYSIS Done plotHistos");
+            
             for (int i = 0; i < this.nsl; i++) {
                 for (int j = 0; j < this.alphaBins; j++) {
-                    this.Plot(i,j); System.out.println(",...............plot "+i+"; "+j);
+                    this.Plot(i,j); 
                 }
             }
             System.out.println("ANALYSIS Done ....");

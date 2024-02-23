@@ -291,8 +291,8 @@ public class TableLoader {
                                 double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                 timebfield+=deltatime_beta;
                                 
-                                int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-                                   
+                                //int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
+                                int tbin= (int) Math.ceil(timebfield/2)-1;
                                 if(tbin<0 || tbin>nBinsT-1) {
                                     //System.err.println("Problem with tbin");
                                     continue;
@@ -357,8 +357,8 @@ public class TableLoader {
                                         double deltatime_beta = util.getDeltaTimeBeta(x,betaValues[ibeta],distbeta[s][r],v0[s][r]);
                                         timebfield+=deltatime_beta;
                                         
-                                        int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-                                        
+                                        //int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
+                                        int tbin= (int) Math.ceil(timebfield/2)-1;
                                         if(tbin<0 || tbin>nBinsT-1) {
                                             //System.err.println("Problem with tbin");
                                             continue;
@@ -383,8 +383,10 @@ public class TableLoader {
         TableLoader.fillMissingTableBins();
         //TableLoader.test();
         //fillT2DGraphs();
-        refillT2DGraphs();
-        System.out.println(" T2D TABLE RE-FILLED.....");
+        if(t2dc.NbRunFit>0) {
+            refillT2DGraphs();
+            System.out.println(" T2D TABLE RE-FILLED.....");
+        }
      }
     
 
