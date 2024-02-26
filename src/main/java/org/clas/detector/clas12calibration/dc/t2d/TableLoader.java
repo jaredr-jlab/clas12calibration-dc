@@ -1,6 +1,5 @@
 package org.clas.detector.clas12calibration.dc.t2d;
 
-import java.awt.Color;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.T2DViewer;
 import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
-import org.jlab.groot.ui.TCanvas;
 import org.jlab.rec.dc.Constants;
 import org.jlab.utils.groups.IndexedTable;
 
@@ -254,13 +252,19 @@ public class TableLoader {
                 delta_bfield_coefficient[s][r] = t2dPressure.getDoubleValue("delta_bfield_a0", s+1,r+1,0)
                         +t2dPressure.getDoubleValue("delta_bfield_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("delta_bfield_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                b1[s][r] = t2dPressure.getDoubleValue("b1_a0", s+1,r+1,0)
+                //b1[s][r] = t2dPressure.getDoubleValue("b1_a0", s+1,r+1,0)
+                //        +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
+                //        +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b1[s][r] = 1.0
                         +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
                 b2[s][r] = t2dPressure.getDoubleValue("b2_a0", s+1,r+1,0)
                         +t2dPressure.getDoubleValue("b2_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b2_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                b3[s][r] = t2dPressure.getDoubleValue("b3_a0", s+1,r+1,0)
+                //b3[s][r] = t2dPressure.getDoubleValue("b3_a0", s+1,r+1,0)
+                //        +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
+                //        +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b3[s][r] = 11.5
                         +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
                 b4[s][r] = t2dPressure.getDoubleValue("b4_a0", s+1,r+1,0)
@@ -292,7 +296,7 @@ public class TableLoader {
                                 timebfield+=deltatime_beta;
                                 
                                 //int tbin = Integer.parseInt(df.format(timebfield/2.) ) -1;
-                                int tbin= (int) Math.ceil(timebfield/2)-1;
+                                int tbin = (int) Math.floor(timebfield/2);
                                 if(tbin<0 || tbin>nBinsT-1) {
                                     //System.err.println("Problem with tbin");
                                     continue;
@@ -304,8 +308,8 @@ public class TableLoader {
                                 } else {
                                     DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]+=stepSize;
                                 }
-                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax*cos30minusalpha) {
-                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=dmax*cos30minusalpha;
+                                if(DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]>dmax) {
+                                    DISTFROMTIME[s][r][ibfield][icosalpha][ibeta][tbin]=dmax;
                                     idist=nxmax;
                                 }
                             }

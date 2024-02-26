@@ -50,8 +50,11 @@ public class FitFunction implements FCNBase{
         double calcTime = polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
             tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1) + deltatime_beta ;
         
+        
+        
         return calcTime;
     }
+    
     
     public static double polyFcnMac(double x, double alpha, double bfield, double v_0, double vm, double R, 
             double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4, int superlayer) {
@@ -61,8 +64,10 @@ public class FitFunction implements FCNBase{
         // alpha correction 
         double cos30minusalpha=Math.cos(Math.toRadians(30.-alpha));
         double dmaxalpha = dmax*cos30minusalpha;
-        if(x>dmaxalpha)
-            x=dmaxalpha;
+        //if(x>dmaxalpha)
+        //    x=dmaxalpha;
+        if(x>dmax)
+            x=dmax;
         double xhatalpha = x/dmaxalpha;
         //   rcapital is an intermediate parameter
         double rcapital = R*dmax;
@@ -83,13 +88,35 @@ public class FitFunction implements FCNBase{
         //B correction
         //------------
         if(superlayer==3 || superlayer==4) {
-            double deltatime_bfield = delBf*Math.pow(bfield,2)*tmax*(Bb1*xhatalpha+Bb2*Math.pow(xhatalpha, 2)+
-                     Bb3*Math.pow(xhatalpha, 3)+Bb4*Math.pow(xhatalpha, 4));
-            //calculate the time at alpha deg. and at a non-zero bfield	          
-            time += deltatime_bfield;
+            
+            time += deltaTimeBf(x, alpha, bfield,
+             tmax, dmax, delBf, Bb1, Bb2, Bb3, Bb4);
         }
+        
         return time;
     }
+    
+    public static double deltaTimeBf(double x, double alpha, double bfield,
+            double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4) {
+        double cos30minusalpha=Math.cos(Math.toRadians(30.-alpha));
+        double dmaxalpha = dmax*cos30minusalpha;
+        double xhatalpha = x/dmaxalpha;
+        double deltatime_bfield = delBf*Math.pow(bfield,2)*tmax*(Bb1*xhatalpha+Bb2*Math.pow(xhatalpha, 2)+
+                     Bb3*Math.pow(xhatalpha, 3)+Bb4*Math.pow(xhatalpha, 4));
+        return deltatime_bfield;
+    } 
+    
+    public static double deltaTimeBfDerivative(double x, double alpha, double bfield, 
+            double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4) {
+        double cos30minusalpha=Math.cos(Math.toRadians(30.-alpha));
+        double dmaxalpha = dmax*cos30minusalpha;
+        double ihatalpha = 1/dmaxalpha;
+         
+        double deltatime_bfield_der = delBf*Math.pow(bfield,2)*tmax*(Bb1*ihatalpha+2*Bb2*Math.pow(ihatalpha, 2)*x+
+                     3*Bb3*Math.pow(ihatalpha, 3)*x*x+4*Bb4*Math.pow(ihatalpha, 4)*x*x*x);
+        return deltatime_bfield_der;
+    } 
+    
     @Override
     public double valueOf(double[] par) {
         double chisq = 0;

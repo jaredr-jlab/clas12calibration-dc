@@ -911,6 +911,7 @@ public class T2DCalib extends AnalysisMonitor{
             ccdb.setVariation(newVar);
             TableLoader.t2dc=this;
             TableLoader.FillT0Tables(newRun, newVar);
+            
             TableLoader.Fill(T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/t2d_pressure"),
                     T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"),
                     T2DViewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/ref_pressure"));  

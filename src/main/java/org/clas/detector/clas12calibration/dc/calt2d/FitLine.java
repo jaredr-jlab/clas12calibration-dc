@@ -5,6 +5,7 @@
  */
 package org.clas.detector.clas12calibration.dc.calt2d;
 
+import static org.clas.detector.clas12calibration.dc.calt2d.FitFunction.polyFcnMac;
 import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.groot.math.Func1D;
 /**
@@ -72,6 +73,8 @@ public class FitLine extends Func1D{
         calcTime = fc.polyFcnMac(x,  ralpha,  B,  v_0,  vm,  R, 
             tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1)+ deltatime_beta ;
         //System.out.println("ijk "+i+""+j+""+k+" b "+(float)T2DCalib.BfieldValues[k]+" ralpha "+(float)ralpha+" x "+x+" time "+(float)calcTime);
+        
+        
         return calcTime;
     }
 
