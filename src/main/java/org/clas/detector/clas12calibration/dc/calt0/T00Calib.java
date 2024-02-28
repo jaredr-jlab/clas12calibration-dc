@@ -11,13 +11,16 @@ import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.clas.detector.clas12calibration.dc.analysis.Coordinate;
 import org.clas.detector.clas12calibration.dc.calt2d.SegmentProperty;
+import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import org.clas.detector.clas12calibration.viewer.AnalysisMonitor;
+import org.clas.detector.clas12calibration.viewer.T0Viewer;
 import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.group.DataGroup;
@@ -45,6 +48,8 @@ public class T00Calib extends AnalysisMonitor{
     File outfile = null;
     private int runNumber;
     private String analTabs = "Fully Corrected Time";
+    private Utilities util = new Utilities();
+   
     public T00Calib(String name, ConstantsManager ccdb) throws FileNotFoundException {
         super(name, ccdb);
         this.setAnalysisTabNames(analTabs);
@@ -67,8 +72,8 @@ public class T00Calib extends AnalysisMonitor{
         //hipoEvent = (HipoDataEvent) writer.createEvent();
         //writer.open("TestOutPut.hipo");
         //writer.writeEvent(hipoEvent);
-        
-        
+        Utilities.NEWDELTATBETAFCN = true;
+
         
     }
     int nsl  = 6;
@@ -235,6 +240,8 @@ public class T00Calib extends AnalysisMonitor{
         if(count==1) {
             Constants.getInstance().initialize("DCCAL");
             TableLoader.FillT0Tables(newRun, "default");
+
+            TableLoader.Fill(T0Viewer.ccdb.getConstants(newRun, "/calibration/dc/time_to_distance/time2dist"));  
             ReadTT.Load(newRun, "default"); 
             runNumber = newRun; 
         }
@@ -251,9 +258,30 @@ public class T00Calib extends AnalysisMonitor{
             int sl = bnkHits.getInt("superlayer", j);
             
             double time = (double) bnkHits.getFloat("time", j);
-            if(bnkHits.getByte("trkID", j)!=-1)
-                this.TDCHis.get(new Coordinate(sec-1, sl-1))
-                    .fill(time);
+            double calibtime = time + bnkHits.getFloat("tBeta",j); //time without tbeta correction
+            //tbeta correction function is in Utilities.java named calcDeltaTimeBetaNew(calibtime,distbeta,beta);
+            double beta = bnkHits.getFloat("beta",j);
+            //distbeta is from ccdb for superlayer and sector 
+            double distbeta = TableLoader.distbeta[sec-1][sl-1];
+           //scale factor on how much of the new beta correction should be applied. values should be from 0 to 1
+            double tbetascalefactor = 1; 
+            //calculate tbeta correction
+            double newtbetacorr = tbetascalefactor*util.calcDeltaTimeBetaNewFCN(calibtime, distbeta, beta);            
+           //apply tbeta correction
+            double timecorrected = calibtime - newtbetacorr;
+            //debug output
+           // System.out.println("Sector " + sec + " sl " + sl + " distbeta is " + distbeta);
+           // System.out.println("time " + time + " calibtime " + calibtime + " calib-newtbeta " + timecorrected + " tbetafromfile " + bnkHits.getFloat("tBeta",j) + " tbetarecal " + newtbetacorr);
+            int trkID = bnkHits.getByte("trkID", j);
+            if(trkID!=-1) {
+                 int pid = this.readPID(event, trkID);            
+            	 //pid 11 is electron, 2212 proton and 211 pion
+                //pass if the track is identified as an electron or as a hadron
+                 if(pid==11) {
+                	 this.TDCHis.get(new Coordinate(sec-1, sl-1))
+                     .fill(timecorrected);
+                 }
+                }
             }
         } 
     
@@ -434,6 +462,27 @@ public class T00Calib extends AnalysisMonitor{
         
         return T0val;
     }
+    
+    private int readPID(DataEvent event, int trkId) {
+        int pid = 0;
+        //fetch the track associated pid from the REC tracking bank
+        if (!event.hasBank("REC::Particle") || !event.hasBank("REC::Track"))
+            return pid;
+        DataBank bank = event.getBank("REC::Track");
+        //match the index and return the pid
+        int rows = bank.rows();
+        for (int i = 0; i < rows; i++) {
+            if (bank.getByte("detector", i) == 6 &&
+                    bank.getShort("index", i) == trkId - 1) {
+                DataBank bank2 = event.getBank("REC::Particle");
+                if(bank2.getByte("charge", bank.getShort("pindex", i))!=0) {
+                    pid = bank2.getInt("pid", bank.getShort("pindex", i));
+                }
+            }
+        }
+        
+        return pid;
+    } 
 
     private double calcError(double n, double en, double d, double ed) {
         return Math.sqrt((en/d)*(en/d)+(ed*n/(d*d))*(ed*n/(d*d)));
