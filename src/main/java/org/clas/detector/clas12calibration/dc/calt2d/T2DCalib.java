@@ -174,7 +174,8 @@ public class T2DCalib extends AnalysisMonitor{
                     TvstrkdocasProf.get(new Coordinate(i,j,k)).setMarkerColor(k+1);
                     TvstrkdocasInit.get(new Coordinate(i,j,k)).setMarkerColor(k+1);
                     TvstrkdocasInit.get(new Coordinate(i,j,k)).setMarkerStyle(2);
-                    
+                    TvstrkdocasInit.get(new Coordinate(i,j,k)).setTitle( "superlayer" + (i + 1)
+                            + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")");
                     Tvscalcdocas.put(new Coordinate(i,j,k), new H2F("calcDocavsT" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
                             +", B "+k, 200, 0, 2.0, 200, 0, 500.0+(int)(i/2)*450.0));
@@ -271,6 +272,8 @@ public class T2DCalib extends AnalysisMonitor{
         
         this.getAnalysisCanvas().getCanvas(Names[6]).divide(4, 3);
         
+        this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").getPad().getAxisY().setRange(-250, 250);
+                
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").update();
         this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").update();
@@ -488,6 +491,8 @@ public class T2DCalib extends AnalysisMonitor{
         scanner.setLimits(2, 0.6, 0.72);
         //distbeta
         scanner.setLimits(4, 0.02, 0.1);
+        //delBf
+        scanner.setLimits(5, 0.10, 0.4);
         
         for (int p = 0; p < 10; p++) {
             if(fixFit[p][i]==true) {
@@ -1107,6 +1112,7 @@ public class T2DCalib extends AnalysisMonitor{
         DataLine l = new DataLine(0, 0, 2.5, 0);
         l.setLineStyle(2);
         l.setLineColor(2);
+        System.out.println("Iteration num "+iterationNum);
         if(i<2 || i>3) { // regions 1 and 3 --> no b-field
             if(TvstrkdocasProf.get(new Coordinate(i, j, BBins)).getVectorX().size()>0) {
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T").cd(0);
@@ -1124,6 +1130,7 @@ public class T2DCalib extends AnalysisMonitor{
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").cd(0);
                 GraphErrors g1 = new GraphErrors();
                 GraphErrors g2 = new GraphErrors();
+                g2.setTitle(TvstrkdocasInit.get(new Coordinate(i, j, BBins)).getTitle());
                 g1.copy(TvstrkdocasProf.get(new Coordinate(i, j, BBins)));
                 for(int ip =0; ip<g1.getVectorX().getSize(); ip++) {
                     if(g1.getDataEY(ip)!=0) {
@@ -1159,7 +1166,13 @@ public class T2DCalib extends AnalysisMonitor{
                     draw(TvstrkdocasFits.get(new Coordinate(i, j, k)), "same");
                 }
             }
+            GraphErrors g0 = new GraphErrors();
+            g0.addPoint(0, 0, 0, 400);
+            g0.setMarkerColor(0);
+            g0.setLineColor(0);
+            g0.setTitle(TvstrkdocasInit.get(new Coordinate(i, j, 1)).getTitle());
             this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").cd(0);
+            this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g0, "E");
             for(int k = 0; k < this.BBins; k++) {
                 if(TvstrkdocasProf.get(new Coordinate(i, j, k)).getVectorX().size()>0){
                     GraphErrors g1 = new GraphErrors();
@@ -1174,8 +1187,9 @@ public class T2DCalib extends AnalysisMonitor{
                             if(iterationNum==0) {
                                 TvstrkdocasInit.get(new Coordinate(i, j, k)).addPoint(g1.getDataX(ip), y-yf, 0, 0);
                             }
-                        }       
+                        } 
                     }
+                    
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "Esame");
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(TvstrkdocasInit.get(new Coordinate(i, j, k)), "Esame");
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
@@ -1543,9 +1557,13 @@ public class T2DCalib extends AnalysisMonitor{
         int pid = this.readPID(event, trkID);
         //pass if the track is identified as an electron or as a hadron
         //if(pid==11 || Math.abs(pid)==211 || Math.abs(pid)==2212 || Math.abs(pid)==321) {
+        if(Integer.parseInt(T2DViewer.pid.getText())==-1) {
+            pass=true;
+        }
         if(pid==Integer.parseInt(T2DViewer.pid.getText())) {    
             pass = true;
         }
+        
         return pass;
     }
     
