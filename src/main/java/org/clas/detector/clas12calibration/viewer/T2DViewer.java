@@ -104,8 +104,9 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
     public static JTextField pid = new JTextField(3);
     public static JTextField usePressureTerm = new JTextField(3);
     public static JTextField enternofevents = new JTextField(3); 
-    public static JTextField sectorN = new JTextField(3); 
+    public static JTextField sectorN = new JTextField(3);
     
+    public static JTextField updatedBConstants = new JTextField(3);
     
     String[] calVars = {"default", "dc_team_rga_fall2018", ""};
     public static JComboBox  calVariation ;
@@ -712,6 +713,18 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
         sectorN.setText("-1");
         sectorN.addActionListener(this);
         tgmPanel.add(sectorN);
+        c.gridx = 1;
+        c.gridy = y;
+        trPanel.add(tgmPanel,c);
+        
+        y++;
+        c.gridx = 0; 
+        c.gridy = y;
+        trPanel.add(new JLabel("Load updated B1,B3 constants = ", JLabel.LEADING),c);
+        tgmPanel = new JPanel();
+        updatedBConstants.setText("false");
+        updatedBConstants.addActionListener(this);
+        tgmPanel.add(updatedBConstants);
         c.gridx = 1;
         c.gridy = y;
         trPanel.add(tgmPanel,c);
