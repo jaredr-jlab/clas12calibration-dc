@@ -272,8 +272,7 @@ public class T2DCalib extends AnalysisMonitor{
         
         this.getAnalysisCanvas().getCanvas(Names[6]).divide(4, 3);
         
-        this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").getPad().getAxisY().setRange(-250, 250);
-                
+        this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").getPad().getAxisY().setRange(-150, 150);
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T").update();
         this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").update();
         this.getAnalysisCanvas().getCanvas( "TrackDoca vs T Fit Resi").update();
@@ -1142,6 +1141,7 @@ public class T2DCalib extends AnalysisMonitor{
                         }
                     }       
                 }
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").clear();
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "E");
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(TvstrkdocasInit.get(new Coordinate(i, j, BBins)), "Esame");                   
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
