@@ -252,19 +252,25 @@ public class TableLoader {
                 delta_bfield_coefficient[s][r] = t2dPressure.getDoubleValue("delta_bfield_a0", s+1,r+1,0)
                         +t2dPressure.getDoubleValue("delta_bfield_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("delta_bfield_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                //b1[s][r] = t2dPressure.getDoubleValue("b1_a0", s+1,r+1,0)
-                //        +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
-                //        +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                b1[s][r] = 1.0
+                if(Boolean.parseBoolean(T2DViewer.updatedBConstants.getText()))
+                    delta_bfield_coefficient[s][r] = 0.14
+                        +t2dPressure.getDoubleValue("delta_bfield_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("delta_bfield_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                b1[s][r] = t2dPressure.getDoubleValue("b1_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                if(Boolean.parseBoolean(T2DViewer.updatedBConstants.getText()))
+                    b1[s][r] = 1.0
                         +t2dPressure.getDoubleValue("b1_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b1_a2", s+1,r+1,0)*dp*dp*dp2scale;
                 b2[s][r] = t2dPressure.getDoubleValue("b2_a0", s+1,r+1,0)
                         +t2dPressure.getDoubleValue("b2_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b2_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                //b3[s][r] = t2dPressure.getDoubleValue("b3_a0", s+1,r+1,0)
-                //        +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
-                //        +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
-                b3[s][r] = 11.5
+                b3[s][r] = t2dPressure.getDoubleValue("b3_a0", s+1,r+1,0)
+                        +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
+                        +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
+                if(Boolean.parseBoolean(T2DViewer.updatedBConstants.getText()))
+                    b3[s][r] = 11.5
                         +t2dPressure.getDoubleValue("b3_a1", s+1,r+1,0)*dp*dpscale
                         +t2dPressure.getDoubleValue("b3_a2", s+1,r+1,0)*dp*dp*dp2scale;
                 b4[s][r] = t2dPressure.getDoubleValue("b4_a0", s+1,r+1,0)
