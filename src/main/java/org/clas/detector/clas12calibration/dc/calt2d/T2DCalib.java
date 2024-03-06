@@ -707,7 +707,7 @@ public class T2DCalib extends AnalysisMonitor{
         }
         System.out.println("REMAKING PROFILES");
         for (int i = 0; i < this.nsl; i++) {
-            for (int j = 0; j < this.alphaBins; j++) {
+            for (int j = 0; j < alphaBins; j++) {
                 this.filltrkDocavsTGraphs(i,j);
                 System.out.println("PROFILE "+i+" "+j+" is OK!");
             }
@@ -1485,6 +1485,53 @@ public class T2DCalib extends AnalysisMonitor{
         
         return pid;
     } 
+    //method by Raffaella
+    private boolean isElectronZeroField(DataEvent event, int trackId) {
+       
+        if(!event.hasBank("REC::Particle") ||
+           !event.hasBank("REC::Calorimeter") ||
+           !event.hasBank("REC::Cherenkov") ||
+           !event.hasBank("REC::Track"))
+            return false;
+        
+        DataBank particleBank    = event.getBank("REC::Particle");
+        DataBank calorimeterBank = event.getBank("REC::Calorimeter");
+        DataBank cherenkovBank   = event.getBank("REC::Cherenkov");
+        DataBank trackBank       = event.getBank("REC::Track");
+         
+        int pindex = -1;
+        for (int i=0; i<trackBank.rows(); i++) {
+            if(trackBank.getShort("index", i)==trackId-1) {
+                pindex = trackBank.getShort("pindex", i);
+                break;
+            }
+        }    
+        
+        if(pindex>=0) {
+            double beta    = particleBank.getFloat("beta", pindex);
+            double vtx     = particleBank.getFloat("vz", pindex);
+
+            double nphe = 0;
+            for(int i=0; i<cherenkovBank.rows(); i++) {
+                if(cherenkovBank.getShort("pindex", i)==pindex) {
+                    nphe = cherenkovBank.getFloat("nphe", i);
+                    break;
+                }
+            }
+
+            double energy = 0;
+            for (int i=0; i<calorimeterBank.rows(); i++) {
+                if(calorimeterBank.getShort("pindex", i)==pindex) {
+                    energy+=calorimeterBank.getFloat("energy", i);
+                }
+            }
+
+            if(beta>0 && nphe>2 && energy>0.5) { 
+                return true;
+            }
+        }    
+        return false;
+    }    
     
     private void updateHit(FittedHit hit, boolean flagOT) { 
         double distbeta = TvstrkdocasFitPars.get(new Coordinate(hit.get_Superlayer()-1)).value(4);
@@ -1640,8 +1687,8 @@ public class T2DCalib extends AnalysisMonitor{
 
     private boolean passPID(DataEvent event, DataBank bnkHits, int rowIdxinTrkBank) {
         boolean pass = false;
-        if(polarity==0) return true;
         int trkID = bnkHits.getByte("trkID", rowIdxinTrkBank);
+        if(polarity==0) return this.isElectronZeroField(event, trkID);
         int pid = this.readPID(event, trkID);
         //pass if the track is identified as an electron or as a hadron
         //if(pid==11 || Math.abs(pid)==211 || Math.abs(pid)==2212 || Math.abs(pid)==321) {
