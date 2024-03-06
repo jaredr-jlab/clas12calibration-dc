@@ -127,7 +127,8 @@ public class FitFunction implements FCNBase{
                     if(_tvstrkdocasProf.get(new Coordinate(this.i, j, k)).getVectorX().size()>0){ 
                         //local angle correction
                         double theta0 = Math.toDegrees(Math.acos(1-0.02*T2DCalib.BfieldValuesUpd[i-2][j][k]));
-                        double alpha = T2DCalib.AlphaValues[j];
+                        //double alpha = T2DCalib.AlphaValues[j];
+                        double alpha = T2DCalib.AlphaValuesUpd[i][j][k]; 
                         // correct alpha with theta0, the angle corresponding to the isochrone lines twist due to the electric field
                         alpha-=(double)T2DCalib.polarity*theta0;
                         //reduce the corrected angle
@@ -149,7 +150,7 @@ public class FitFunction implements FCNBase{
             } else {
                 if(_tvstrkdocasProf.get(new Coordinate(this.i, j, T2DCalib.BBins)).getVectorX().size()>0){ 
                     //local angle correction
-                    double alpha = T2DCalib.AlphaValues[j];
+                    double alpha = T2DCalib.AlphaValuesUpd[i][j][T2DCalib.BBins];
                     //reduce the corrected angle
                     double ralpha = (double) util.getReducedAngle(alpha);
                     GraphErrors gr = _tvstrkdocasProf.get(new Coordinate(this.i, j, T2DCalib.BBins));

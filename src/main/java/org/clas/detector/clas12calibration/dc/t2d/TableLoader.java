@@ -161,18 +161,20 @@ public class TableLoader {
             mnp.add(parNames[10], pars[10], errs[10]);
             for (int j = 0; j < T2DCalib.alphaBins; j++) {
                 for (int k = 0; k < BBins+1; k++) {
-                    TvsDB.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                    TvsDB.put(new Coordinate(i,j,k), new FitLine("f_"+"i"+i+"j"+j+"k"+k, i, j, k, 
                                 mnp));
                     TvsDB.get(new Coordinate(i, j, k)).setLineWidth(2);
                     TvsDB.get(new Coordinate(i, j, k)).setLineColor(k+1);
                     TvsDB.get(new Coordinate(i, j, k)).setRange(0, pars[10]);   
                     TvsDB.get(new Coordinate(i, j, k)).useMidBfieldBin=true;
-                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                    TvsDB.get(new Coordinate(i, j, k)).useMidAlphaBin=true;
+                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f_"+"i"+i+"j"+j+"k"+k, i, j, k, 
                                mnp));
                     TvsDBr.get(new Coordinate(i, j, k)).setLineWidth(2);
                     TvsDBr.get(new Coordinate(i, j, k)).setLineColor(k+1);
                     TvsDBr.get(new Coordinate(i, j, k)).setRange(0, pars[10]); 
                     TvsDBr.get(new Coordinate(i, j, k)).useMidBfieldBin=true;
+                    TvsDBr.get(new Coordinate(i, j, k)).useMidAlphaBin=true;
                 }
             }
         }
@@ -202,9 +204,10 @@ public class TableLoader {
             mnp.add(parNames[10], pars[10], errs[10]);
             for (int j = 0; j < T2DCalib.alphaBins; j++) {
                 for (int k = 0; k < BBins+1; k++) {
-                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f"+""+i+""+j+""+k, i, j, k, 
+                    TvsDBr.put(new Coordinate(i,j,k), new FitLine("f_"+"i"+i+"j"+j+"k"+k, i, j, k, 
                                mnp));
                     TvsDBr.get(new Coordinate(i, j, k)).useMidBfieldBin=true;
+                    TvsDBr.get(new Coordinate(i, j, k)).useMidAlphaBin=true;
                     TvsDBr.get(new Coordinate(i, j, k)).setRange(0, pars[10]);
                     TvsDBr.get(new Coordinate(i, j, k)).setLineWidth(2);
                     TvsDBr.get(new Coordinate(i, j, k)).setLineColor(k+1);

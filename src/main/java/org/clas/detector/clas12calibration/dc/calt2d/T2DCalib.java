@@ -109,6 +109,14 @@ public class T2DCalib extends AnalysisMonitor{
                 }
             }
         }
+        //init ABin Centers
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < this.alphaBins; j++) {
+                for (int k = 0; k <= this.BBins; k++) {
+                    AlphaValuesUpd[i][j][k] = AlphaValues[j];
+                }
+            }
+        }
         
     }
     private Map<Coordinate, H2F> Tvstrkdocas                = new HashMap<Coordinate, H2F>();
@@ -123,6 +131,7 @@ public class T2DCalib extends AnalysisMonitor{
     private Map<Coordinate, H1F> timeResiNew            = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H1F> fitResi        = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H1F> B              = new HashMap<Coordinate, H1F>(); //histogram to get B values centroids
+    private Map<Coordinate, H1F> A              = new HashMap<Coordinate, H1F>(); //histogram to get Alpha values centroids
     private Map<Coordinate, H1F> BAlphaBins              = new HashMap<Coordinate, H1F>();
     private Map<Coordinate, H1F> ParsVsIter    = new HashMap<Coordinate, H1F>();
     public int nsl = 6;
@@ -134,6 +143,13 @@ public class T2DCalib extends AnalysisMonitor{
     public static int BBins = BfieldValues.length;
     //update middle of the B bins
     public static double[][][] BfieldValuesUpd = new double[2][alphaBins][BBins];
+    public static double[][][] AlphaValuesUpd = new double[6][alphaBins][BBins+1];
+    int nbinx[] = new int[6];
+    int nbiny[] = new int[6];
+    double docaBinWidth = 0.015;
+    double timeBinWidth = 2.0;
+    double maxx[] = new double[]{0.85,0.97,1.34,1.38,1.95,2.0};
+    double maxy[] = new double[]{400,410,1200,1500,1000,1200};
     @Override
     public void createHistos() {
         // initialize canvas and create histograms
@@ -145,6 +161,10 @@ public class T2DCalib extends AnalysisMonitor{
         DataGroup tr = new DataGroup(6,1);
         DataGroup fr = new DataGroup(6,1);
         
+        for(int l=0; l<6; l++) {
+            nbinx[l] = (int) Math.ceil(maxx[l]/docaBinWidth);
+            nbiny[l] = (int) Math.ceil(maxy[l]/timeBinWidth);
+        }
         int ijk = 0;
         int ij = 0;
         for (int i = 0; i < nsl; i++) {
@@ -167,7 +187,7 @@ public class T2DCalib extends AnalysisMonitor{
                     DataGroup prfdvst = new DataGroup(1,1);
                     Tvstrkdocas.put(new Coordinate(i,j,k), new H2F("trkDocavsT" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
-                            +", B "+k, 200, 0, 2.0, 200, 0, 500.0+(int)(i/2)*450.0));
+                            +", B "+k, nbinx[i], 0, maxx[i], nbiny[i], 0, maxy[i]));
                     
                     TvstrkdocasProf.put(new Coordinate(i,j,k), new GraphErrors());
                     TvstrkdocasInit.put(new Coordinate(i,j,k), new GraphErrors());
@@ -178,7 +198,7 @@ public class T2DCalib extends AnalysisMonitor{
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")");
                     Tvscalcdocas.put(new Coordinate(i,j,k), new H2F("calcDocavsT" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
-                            +", B "+k, 200, 0, 2.0, 200, 0, 500.0+(int)(i/2)*450.0));
+                            +", B "+k, nbinx[i], 0, maxx[i], nbiny[i], 0, maxy[i]));
                     tdp.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), ijk);
                     //trkdvst.addDataSet(Tvstrkdocas.get(new Coordinate(i,j,k)), 0);
                     prfdvst.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), 0);
@@ -188,6 +208,15 @@ public class T2DCalib extends AnalysisMonitor{
                     this.getDataGroup().add(prfdvst, 0, i+1, j+1);
                     
                     ijk++;
+                }
+            }
+        }
+         //Alpha centroids
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < this.alphaBins; j++) {
+                BAlphaBins.put(new Coordinate(i,j), new H1F("A  " , 100, -36, 36));
+                for (int k = 0; k <= this.BBins; k++) {
+                    A.put(new Coordinate(i,j,k), new H1F("A centroid " +(i + 1)*1000+(j+1)+26, 100, -36, 36));
                 }
             }
         }
@@ -292,7 +321,7 @@ public class T2DCalib extends AnalysisMonitor{
             calwriter.close();
             writer.close();
             this.UpdateBBinCenters();
-            
+            this.UpdateAlphaBinCenters();
             
             for (int i = 0; i < this.nsl; i++) {
                 for (int j = 0; j < this.alphaBins; j++) {
@@ -801,69 +830,103 @@ public class T2DCalib extends AnalysisMonitor{
     F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
     F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
     private void filltrkDocavsTGraphs(int i, int j, int k) {
+
+        Logger.getLogger("org.freehep.math.minuit").setLevel(Level.WARNING);
+
         if(TvstrkdocasProf.get(new Coordinate(i, j, k))!=null) {
             TvstrkdocasProf.get(new Coordinate(i, j, k)).reset();
-            
             H2F h2 = Tvstrkdocas.get(new Coordinate(i, j, k));
-            
+//            ParallelSliceFitter psf = new ParallelSliceFitter(h2);
+//            psf.setBackgroundOrder(0);
+//            psf.fitSlicesX();
+//            GraphErrors meangr  = psf.getMeanSlices();
             ArrayList<H1F> hslice = h2.getSlicesX();
             for(int si=0; si<hslice.size(); si++) {
+                double x = h2.getXAxis().getBinCenter(si);
                 double amp   = hslice.get(si).getBinContent(hslice.get(si).getMaximumBin());
-                double meanh = hslice.get(si).getDataX(hslice.get(si).getMaximumBin());
-                if(hslice.get(si).getMean()==0 || amp<this.MINENTRIES) {
-                    
+                double dmax = 2.*Constants.getInstance().wpdist[i];
+                if(hslice.get(si).getMean()==0 || amp<this.MINENTRIES) 
+                    continue;
+               
+                if( x/dmax<0.1 ) { // for large docas (80% of dmax take fit with a double gauss )
+                    this.fitSingleGaus(si, x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
                 } else {
-                    double mean = hslice.get(si).getMean();
-                    double x = h2.getXAxis().getBinCenter(si);
-                    double y = hslice.get(si).getMean();
-                    double sigma = hslice.get(si).getRMS(); 
-//                    if(x/(2.*Constants.getInstance().wpdist[i])>0.1) { // for large docas (90% of dmax take fit with a double gauss and take the peak of the one at smaller distance as y
-//                        f2.setParameter(0, amp);
-//                        f2.setParameter(1, mean);
-//                        f2.setParameter(2, sigma);
-//                        f2.setParameter(4, y+10);
-//                        f2.setParameter(5, sigma+10);
-//                        f2.setParameter(6, 0);
-//                    System.out.println(f2.isFitValid()+" "+f2.getParameter(0)+" "+f2.getParameter(1)
-//                                        +" "+f2.getParameter(2)+" "+f2.getParameter(3)
-//                                        +" "+f2.getParameter(4)+" "+f2.getParameter(5)+" "+f2.getParameter(6));
-//                        DataFitter.fit(f2, hslice.get(si), "Q"); //No options uses error for sigma 
-//                        if(f2.getChiSquare()<200 && f2.getParameter(1)>0 && f2.parameter(1).error()<50) {
-//                            TvstrkdocasProf.get(new Coordinate(i, j, k)).
-//                                    addPoint(x, f2.getParameter(1), 0, sigma);
-//                        }
-//                    } else 
-                    {
-                        double min = mean-3*sigma;
-                        double max = mean+3*sigma;
-                        if(min<0) min=0;
-                        f1.setRange(min, max);
-                        f1.setParameter(0, amp);
-                        f1.setParameter(1, mean);
-                        f1.setParameter(2, sigma);
-                        f1.setParameter(3, 0);
-                        f1.setParLimits(0, amp-1, amp+10);
-                        f1.setParLimits(1, min, max);
-                        
-                        //TvstrkdocasProf.get(new Coordinate(i, j, k)).
-                        //            addPoint(x, f1.getParameter(1), 0, sigma);
-                        
-                        DataFitter.fit(f1, hslice.get(si),"LQ"); //No options uses error for sigma 
-                        
-                        if(f1.isFitValid() && f1.getChiSquare()<200 && f1.getParameter(1)>0
-                                && x<2.*Constants.getInstance().wpdist[i] 
-                                && f1.parameter(1).error()<50
-                                && Math.abs(meanh-f1.getParameter(1))<sigma && f1.getParameter(1)>0) {
-                            //sigma = f1.getParameter(2);
-                            TvstrkdocasProf.get(new Coordinate(i, j, k)).
-                                    addPoint(x, f1.getParameter(1), 0, sigma);
-                        }
-                    }
+                    this.fitDoubleGaus(si, x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
                 }
             }
         }
     }
 
+    private void fitSingleGaus(int si, double x, H1F h, GraphErrors ge) {
+        double mean = h.getMean(); 
+        double meanh = h.getDataX(h.getMaximumBin());
+        double amp   = h.getBinContent(h.getMaximumBin());
+        double sigma = h.getRMS(); 
+
+        double min = mean-3*sigma;
+        double max = mean+3*sigma;
+        
+        f1.setRange(min, max);
+        f1.setParameter(0, amp);
+        f1.setParameter(1, mean);
+        f1.setParameter(2, sigma);
+        f1.setParameter(3, 0);
+        f1.setParLimits(0, this.MINENTRIES, amp+10);
+        f1.setParLimits(1, min, max);
+        
+        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
+        double mu = meanh;
+        double emu= sigma;
+        if(f1.isFitValid() && f1.getParameter(1)>0
+                && f1.parameter(1).error()<sigma
+                && Math.abs(meanh-f1.getParameter(1))<sigma && f1.getParameter(1)>0) {
+            
+            if(Math.abs(mean-mu)<sigma && f1.getChiSquare()<500)
+                mu = f1.getParameter(1);
+            emu = f1.parameter(1).error();
+            if(si==0 || si==1) 
+                emu = 0;
+        }
+        ge.addPoint(x, mu, 0, emu);
+    }
+
+    private void fitDoubleGaus(int si, double x, H1F h, GraphErrors ge) {
+        double mean = h.getMean();
+        double meanh = h.getDataX(h.getMaximumBin());
+        double amp   = h.getBinContent(h.getMaximumBin());
+        double sigma = h.getRMS(); 
+
+        double min = mean-3*sigma;
+        double max1 = mean+3*sigma;
+        double max2 = mean+5*sigma;
+        if(min<0) min=0;
+        f2.setRange(min, max2);
+        f2.setParameter(0, amp);
+        f2.setParameter(1, mean);
+        f2.setParameter(2, sigma);
+        f2.setParameter(3, amp/3.0);
+        f2.setParameter(4, mean);
+        f2.setParameter(5, sigma);
+        f2.setParameter(6, 0);
+        f2.setParLimits(0, this.MINENTRIES, amp+10);
+        f2.setParLimits(1, min, max1);
+        f2.setParLimits(4, min, max1);
+
+        DataFitter.fit(f2, h,"LQ"); //No options uses error for sigma 
+        double mu = meanh;
+        double emu= sigma;
+        if(f2.isFitValid() && f2.getParameter(1)>0 && f2.getParameter(4)>0
+                && f2.parameter(1).error()<sigma && f2.parameter(4).error()<sigma
+                && f1.getParameter(1)>0) {
+           
+            double mutest = (f2.getParameter(0)*f2.getParameter(1)+f2.getParameter(3)*f2.getParameter(4))/(f2.getParameter(0)+f2.getParameter(3));
+            
+            if(Math.abs(meanh-mutest)<sigma && f1.getChiSquare()<500)
+                mu = mutest;
+            emu = Math.sqrt(f2.parameter(1).error()*f2.parameter(1).error()+f2.parameter(4).error()*f2.parameter(4).error());
+        }
+        ge.addPoint(x, mu, 0, emu);
+    }
     
     private void filltrkDocavsTGraphs(int i, int j) {
         if(i<2 || i>3) { //region 1 and 3
@@ -991,12 +1054,20 @@ public class T2DCalib extends AnalysisMonitor{
                 timeResiFromFile.get(new Coordinate(bnkHits.getInt("superlayer", i) - 1))
                                 .fill(bnkHits.getFloat("timeResidual", i));
                 //Fill region 2 for different b-field values
-                if(superlayer>2 && superlayer<5) { 
-                    int bBin = this.getBBin(bFieldVal);
+                if(superlayer<3 || superlayer>4) { 
+                    A.get(new Coordinate(superlayer-1, alphaBin, BBins))
+                                .fill(alphaUncor);
+                    //System.out.println("Filling alpha for spl "+superlayer+" alpha bin "+alphaBin+" alpha "+alphaUncor);
+                }
+                    
                     // fill B values histograms
-                    if(superlayer ==3 || superlayer ==4)
-                        B.get(new Coordinate(superlayer-3, alphaBin, bBin))
-                                .fill(bFieldVal);
+                if(superlayer ==3 || superlayer ==4) {
+                    int bBin = this.getBBin(bFieldVal);
+                    B.get(new Coordinate(superlayer-3, alphaBin, bBin))
+                            .fill(bFieldVal);
+                    A.get(new Coordinate(superlayer-1, alphaBin, this.getBBin(bFieldVal)))
+                            .fill(alphaUncor);
+                    //System.out.println("Filling alpha for spl "+superlayer+" alpha bin "+alphaBin+" Bin "+this.getBBin(bFieldVal)+" alpha "+alphaUncor);
                 }
             }
         }
@@ -1025,7 +1096,7 @@ public class T2DCalib extends AnalysisMonitor{
     private double[][] resetPars = new double[6][11];
     private String[] parNames = {"v0", "vmid", "R", "tmax", "distbeta", "delBf", 
         "b1", "b2", "b3", "b4", "dmax"};
-    private double[] errs = {0.0001,0.0001,0.001,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
+    private double[] errs = {0.00001,0.000001,0.0001,1.0,0.001,0.0001,0.001,0.001,0.001,0.001,0.00001};
     
     public void resetPars() {
         TvstrkdocasFitPars.clear();
@@ -1122,6 +1193,7 @@ public class T2DCalib extends AnalysisMonitor{
                 this.getAnalysisCanvas().getCanvas("CalcDoca vs T").draw(Tvscalcdocas.get(new Coordinate(i, j, BBins)));
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").
                         draw(TvstrkdocasProf.get(new Coordinate(i, j, BBins)), "same");
+                //TvstrkdocasFits.get(new Coordinate(i, j, BBins)).setRange(0, maxx[i]);
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").
                         draw(TvstrkdocasFits.get(new Coordinate(i, j, BBins)), "same");
                 this.getAnalysisCanvas().getCanvas("CalcDoca vs T").
@@ -1160,6 +1232,7 @@ public class T2DCalib extends AnalysisMonitor{
                 if(TvstrkdocasProf.get(new Coordinate(i, j, k)).getVectorX().size()>0){
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").
                             draw(TvstrkdocasProf.get(new Coordinate(i, j, k)), "same");
+                    //TvstrkdocasFits.get(new Coordinate(i, j, k)).setRange(0, maxx[i]);
                     this.getAnalysisCanvas().getCanvas("TrackDoca vs T Graphs").
                             draw(TvstrkdocasFits.get(new Coordinate(i, j, k)), "same");
                     this.getAnalysisCanvas().getCanvas("CalcDoca vs T").
@@ -1197,6 +1270,7 @@ public class T2DCalib extends AnalysisMonitor{
             }
         }
     }
+    
     @Override
     public void constantsEvent(CalibrationConstants cc, int col, int row) {
         String str_sector    = (String) cc.getValueAt(row, 0);
@@ -1469,7 +1543,19 @@ public class T2DCalib extends AnalysisMonitor{
         
         return distance;
     }
-
+    private void UpdateAlphaBinCenters() {
+        for (int i = 0; i < 6; i++) {
+            for (int j = 0; j < this.alphaBins; j++) {
+                for (int k = 0; k <= this.BBins; k++) {
+                    AlphaValuesUpd[i][j][k] = AlphaValues[j];
+                    if(A.get(new Coordinate(i,j,k)).getBinContent(A.get(new Coordinate(i,j,k)).getMaximumBin())>0) {
+                        AlphaValuesUpd[i][j][k] = A.get(new Coordinate(i,j,k)).getMean();
+                    System.out.println("ijk" +i+" "+j+" "+k+" Alpha Bin UPdated "+AlphaValues[j]+" --> "+AlphaValuesUpd[i][j][k] );
+                    }
+                }
+            }
+        }
+    }
     private void UpdateBBinCenters() {
         TCanvas can1 = new TCanvas("superlayer3 B", 800, 800);
         TCanvas can2 = new TCanvas("superlayer4 B", 800, 800);
@@ -1480,7 +1566,7 @@ public class T2DCalib extends AnalysisMonitor{
                     BfieldValuesUpd[i][j][k] = BfieldValues[k];
                     if(B.get(new Coordinate(i,j,k)).getBinContent(B.get(new Coordinate(i,j,k)).getMaximumBin())>10) {
                         BfieldValuesUpd[i][j][k] = B.get(new Coordinate(i,j,k)).getMean();
-                    //System.out.println("ijk" +i+" "+j+" "+k+" BBin UPdated "+BfieldValues[k]+" --> "+BfieldValuesUpd[i][j][k] );
+                    System.out.println("ijk" +i+" "+j+" "+k+" BBin UPdated "+BfieldValues[k]+" --> "+BfieldValuesUpd[i][j][k] );
                     }
                 }
             }
@@ -1512,6 +1598,8 @@ public class T2DCalib extends AnalysisMonitor{
             }
         }
     }
+    
+    
 
     private boolean selectOnAlpha(int superlayer, double alphaRadUncor) {
         boolean pass = false;
@@ -1644,5 +1732,7 @@ public class T2DCalib extends AnalysisMonitor{
         }
         
     }
+
+    
 }
 

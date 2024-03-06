@@ -5,7 +5,6 @@
  */
 package org.clas.detector.clas12calibration.dc.calt2d;
 
-import static org.clas.detector.clas12calibration.dc.calt2d.FitFunction.polyFcnMac;
 import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.groot.math.Func1D;
 /**
@@ -19,6 +18,7 @@ public class FitLine extends Func1D{
     private FitFunction fc ;
     private Utilities util = new Utilities();
     public boolean useMidBfieldBin=false;
+    public boolean useMidAlphaBin=false;
     public FitLine() {
         super("fcn", 0.0, 2.0);
         fc = new FitFunction();
@@ -26,7 +26,7 @@ public class FitLine extends Func1D{
     public static final int nPars = 11;
     private double[] par = new double[nPars];
     public FitLine(String name, int i, int j, int k, MnUserParameters pars) {
-        super(name, 0.0, 2.0);
+        super(name, 0.0, pars.value(10));
         this.i = i;
         this.j = j;
         this.k = k;
@@ -44,11 +44,13 @@ public class FitLine extends Func1D{
         double calcTime = 0;
         double B = 0;
         //local angle correction
-        double alpha = T2DCalib.AlphaValues[j];
+        double alpha = T2DCalib.AlphaValuesUpd[i][j][k];
+        if(useMidAlphaBin)
+            alpha = T2DCalib.AlphaValues[j];
         if(this.i>1 && this.i<4) {
             B = T2DCalib.BfieldValuesUpd[i-2][j][k];
             if(useMidBfieldBin)
-                 B=T2DCalib.BfieldValues[k]; 
+                B=T2DCalib.BfieldValues[k]; 
             double theta0 = Math.toDegrees(Math.acos(1-0.02*B));
             // correct alpha with theta0, the angle corresponding to the isochrone lines twist due to the electric field
             alpha-=(double)T2DCalib.polarity*theta0;
