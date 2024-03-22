@@ -7,6 +7,7 @@ package org.clas.detector.clas12calibration.viewer;
 import org.jlab.logging.DefaultLogger;
 import java.awt.BorderLayout;
 import java.awt.Dialog;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -744,6 +745,8 @@ public class T2DViewer implements IDataEventListener, DetectorListener, ActionLi
     public static void main(String[] args) throws FileNotFoundException {
         
         JFrame frame = new JFrame("DC Calibration");
+        Dimension dim = new Dimension(100,100) ;
+        frame.setMinimumSize(dim);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         T2DViewer viewer = new T2DViewer();
         frame.add(viewer.mainPanel);

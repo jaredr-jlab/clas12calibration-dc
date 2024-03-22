@@ -96,6 +96,7 @@ public class FitPanel {
             }
         }
         this._pM.initFitParsToFile();
+        
         for(int j = 0; j<6; j++) {
             for(int i=0; i<npar; i++){ 
                 System.out.println("j "+j+" par "+this.pars.get(j).get(i));
@@ -103,7 +104,8 @@ public class FitPanel {
                     fixedPars[i][j] = true;
             }
             
-            this._pM.runFit(j, fixedPars);
+            this._pM.runFit(j, fixedPars, true);
+            
             for(int p = 0; p<10; p++) {
                 panel.pars[p][j] = TvstrkdocasFitPars.get(new Coordinate(j)).value(p);
                 if(p!=3) {

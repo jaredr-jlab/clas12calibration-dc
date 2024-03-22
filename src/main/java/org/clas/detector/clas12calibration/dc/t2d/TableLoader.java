@@ -295,8 +295,8 @@ public class TableLoader {
                             maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
                             double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
                             double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
-                            int nxmax = (int) (dmax*cos30minusalpha/stepSize)+1; 
-
+                            //int nxmax = (int) (dmax*cos30minusalpha/stepSize)+1; 
+                            int nxmax = (int) (dmax/stepSize)+1; 
                             for(int idist =0; idist<nxmax; idist++) {
 
                                 double x = (double)(idist+1)*stepSize;
@@ -361,7 +361,8 @@ public class TableLoader {
                                 maxBinIdxT[s][r][ibfield][icosalpha] = nBinsT; 
                                 double cos30minusalpha = Math.cos(Math.toRadians(30.)) + (double) (icosalpha)*(1. - Math.cos(Math.toRadians(30.)))/5.;
                                 double alpha = -(Math.toDegrees(Math.acos(cos30minusalpha)) - 30);
-                                int nxmax = (int) (dmax*cos30minusalpha/stepSize); 
+                                //int nxmax = (int) (dmax*cos30minusalpha/stepSize); 
+                                int nxmax = (int) (dmax/stepSize); 
                                 for(int ibeta=0; ibeta<betaValues.length; ibeta++) {
                                     for(int idist =0; idist<nxmax; idist++) {
 

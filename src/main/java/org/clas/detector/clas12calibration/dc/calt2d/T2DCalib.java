@@ -146,8 +146,8 @@ public class T2DCalib extends AnalysisMonitor{
     public static double[][][] AlphaValuesUpd = new double[6][alphaBins][BBins+1];
     int nbinx[] = new int[6];
     int nbiny[] = new int[6];
-    double docaBinWidth = 0.015;
-    double timeBinWidth = 2.0;
+    double docaBinWidth = 0.025;
+    double timeBinWidth = 1.0;
     double maxx[] = new double[]{0.85,0.97,1.34,1.38,1.95,2.0};
     double maxy[] = new double[]{400,410,1200,1500,1000,1200};
     @Override
@@ -480,7 +480,7 @@ public class T2DCalib extends AnalysisMonitor{
             //this.rePlotResi();
         }
     }
-    private int maxIter = 10;
+    private int maxIter = 100;
     double[][] fixPars = new double[6][10];
     
     private MnScan  scanner = null;
@@ -499,7 +499,17 @@ public class T2DCalib extends AnalysisMonitor{
                     + df.format(new Date())+ "iteration_"+this.iterationNum  + ".txt";
         pw3 = new PrintWriter(fileName3);
     }
-    public void runFit(int i, boolean fixFit[][]) {
+    
+    double v0limits[][]         = new double[][]{{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009}};     //  limits for each superlayer
+    double vmidlimits[][]       = new double[][]{{0.003, 0.005},{0.003, 0.005},{0.002, 0.005},{0.002, 0.005},{0.001, 0.003},{0.001, 0.003}};     
+    double Rlimits[][]          = new double[][]{{0.3,0.67},{0.3,0.67},{0.45, 0.8},{0.45,0.8},{0.65,0.75},{0.65,0.75}};                            
+    double distbetalimits[][]   = new double[][]{{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1}};                       
+    double delBflimits[][]      = new double[][]{{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4}};                       //  limits for each superlayer
+    
+    double limits[][][] = new double[][][]{v0limits, vmidlimits, Rlimits, distbetalimits, delBflimits};
+    public double[] edm = new double[]{Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY};
+    
+    public void runFitOld(int i, boolean fixFit[][], boolean saveFitRes) {
         // i = superlayer - 1;
         System.out.println(" **************** ");
         System.out.println(" RUNNING THE FITS ");
@@ -580,6 +590,164 @@ public class T2DCalib extends AnalysisMonitor{
             
         }
     }
+    public void runFit(int i, boolean fixFit[][], boolean saveFitRes) {
+        // i = superlayer - 1;
+        edm = new double[]{Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY};
+    
+        System.out.println(" ******************************** ");
+        System.out.println(" RUNNING THE FITS FOR SUPERLAYER "+(i+1));
+        System.out.println(" ******************************** ");
+        TvstrkdocasFit.put(new Coordinate(i), 
+                new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
+        
+        scanner = new MnScan((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                TvstrkdocasFitPars.get(new Coordinate(i)),2);
+        
+        FunctionMinimum min = null ;
+        FunctionMinimum bestmin = null ;
+        
+        scanner.fix(10);
+        
+        
+        for (int p = 0; p < 10; p++) {
+            if(fixFit[p][i]==true) {
+                scanner.fix(p); 
+            }
+        }
+        FunctionMinimum scanmin = scanner.minimize();
+        if(scanmin.isValid())
+            TvstrkdocasFitPars.put(new Coordinate(i),scanmin.userParameters());
+        
+        migrad = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                TvstrkdocasFitPars.get(new Coordinate(i)),1);
+       
+        boolean converge=true;
+        migrad.setUseAnalyticalDerivatives(true);
+        migrad.checkAnalyticalDerivatives();
+        System.out.println("MG "+migrad.strategy().gradientNCycles()+", "+
+                migrad.strategy().gradientStepTolerance()+", "+migrad.strategy().gradientTolerance()+"; "+
+                migrad.strategy().hessianGradientNCycles()+", "+migrad.strategy().isLow()
+                +", "+migrad.strategy().isMedium()+", "+migrad.strategy().isHigh());
+        
+        
+        for(int it = 0; it<maxIter; it++) {
+            System.out.println("iteration "+(it+1));
+           
+            min = migrad.minimize();
+           // System.err.println("****************************************************");
+           // System.err.println("*   FIT RESULTS  FOR SUPERLAYER  "+(i+1)+" at iteration "+(it+1)+"  *");
+           // System.err.println("****************************************************");  
+            
+             System.out.println("EDM "+edm[i]+" --> "+min.edm());
+            for(int pa = 0; pa<6; pa++) {
+                System.out.println(it+"] "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pa) +" --> "+min.userParameters().value(pa));
+                
+            }
+            if(edm[i]<min.edm()) converge=false;
+            
+            for(int pi = 0; pi<3; pi++) {
+                if(min.userParameters().value(pi)<limits[pi][i][0] && fixFit[pi][i]==false) {
+                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
+                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    migrad.fix(pi);
+                    min = migrad.minimize();
+                    migrad.release(pi);
+                    min = migrad.minimize();
+                    if(min.userParameters().value(pi)<limits[pi][i][0]) {
+                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                        migrad.fix(pi);
+                        fixFit[pi][i]=true;
+                        min = migrad.minimize();
+                    }
+                }
+                if(min.userParameters().value(pi)>limits[pi][i][1] && fixFit[pi][i]==false) {
+                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
+                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    migrad.fix(pi);
+                    min = migrad.minimize();
+                    migrad.release(pi);
+                    min = migrad.minimize();
+                    if(min.userParameters().value(pi)>limits[pi][i][1]) {
+                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                        migrad.fix(pi);
+                        fixFit[pi][i]=true;
+                        min = migrad.minimize();
+                    }
+                }
+            }
+            for(int pi = 4; pi<6; pi++) {
+                if(min.userParameters().value(pi)<limits[pi-1][i][0] && fixFit[pi][i]==false) {
+                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
+                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    migrad.fix(pi);
+                    min = migrad.minimize();
+                    migrad.release(pi);
+                    min = migrad.minimize();
+                    if(min.userParameters().value(pi)<limits[pi-1][i][0]) {
+                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                        migrad.fix(pi);
+                        fixFit[pi][i]=true;
+                        min = migrad.minimize();
+                    }
+                }
+                if(min.userParameters().value(pi)>limits[pi-1][i][1] && fixFit[pi][i]==false) {
+                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
+                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                    migrad.fix(pi);
+                    min = migrad.minimize();
+                    migrad.release(pi);
+                    min = migrad.minimize();
+                    if(min.userParameters().value(pi)>limits[pi-1][i][1]) {
+                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
+                        migrad.fix(pi);
+                        fixFit[pi][i]=true;
+                        min = migrad.minimize();
+                    }
+                }
+            }
+            
+            if(min.isValid() && converge) {
+                bestmin=min;
+                TvstrkdocasFitPars.put(new Coordinate(i),min.userParameters());  
+            }
+            
+            //System.err.println(min);
+            
+            if(edm[i]==min.edm()) break;
+            edm[i]=min.edm();
+            if(!converge) break;
+        }
+        if(bestmin!=null ) {
+            
+            if(saveFitRes) {
+                String t = "FINAL MINUIT FIT RESULT FOR SUPERLAYER ";
+                t+=(i+1);
+                t+=" :";
+                System.out.println(t);
+                String s = String.valueOf(bestmin);  System.out.println(s);
+                pw3.println(t);
+                pw3.println(s);
+            }
+        }
+
+        //release all so they can be fixed again
+        TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
+        for (int p = 0; p < 10; p++) {
+            if(fixFit[p][i]==true) {
+                TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+            }
+        }
+        if(i==5) {
+            System.err.println("***************************************************");
+            System.err.println("*                  FITS ARE DONE!                 *");
+            System.err.println("***************************************************");  
+            
+        }
+    }
     
     int counter = 0;
     private int iterationNum = 0;
@@ -625,7 +793,7 @@ public class T2DCalib extends AnalysisMonitor{
                 }
                 for(FittedHit hit : hits) {
                     hit.set_TimeResidual(-999);
-                    updateHit(hit, false); //update the hit with previous cal results
+                    updateHit(hit, true); //update the hit with previous cal results
                 }
                 //refit with new constants
                 Refit rf = new Refit();
@@ -670,6 +838,7 @@ public class T2DCalib extends AnalysisMonitor{
                 Refit rf = new Refit();
                 rf.reFit(calhits, true);    //uaw only not out of time hits to get the calib cst
                 for(FittedHit hit : calhits) {
+                    if(hit.get_OutOfTimeFlag()) continue;
                     double theta0 = Math.toDegrees(Math.acos(1-0.02*hit.getB()));
                     double alphaUncor = hit.getAlpha()+(double)T2DCalib.polarity*theta0;
                     int alphaBin = this.getAlphaBin(alphaUncor);
@@ -792,7 +961,9 @@ public class T2DCalib extends AnalysisMonitor{
         //gausFunc.setOptStat(101100); //mean and both sigmas
         
         
-        int effSig = (int) (10000*(gaus1Func.getParameter(2)));
+        int effSig = (int) Math.round(10000*Math.sqrt(gausFunc.getParameter(2)*gausFunc.getParameter(2)+
+                                            0.25*0.25*gausFunc.getParameter(3)*gausFunc.getParameter(3))/
+                                            Math.sqrt(1+0.25*0.25));
         String t = "Eff. Sig. "+effSig + "microns";
         h1.setTitle(t);
         canvasRes.draw(h1, "E1");
@@ -825,7 +996,8 @@ public class T2DCalib extends AnalysisMonitor{
         //return bbinIdx ;
         return v ;
     }
-    private int MINENTRIES = 5;
+    private int MINENTRIES = 8;
+    private int MINENTRIES2G = 10;
     
     F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
     F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
@@ -840,24 +1012,26 @@ public class T2DCalib extends AnalysisMonitor{
 //            psf.setBackgroundOrder(0);
 //            psf.fitSlicesX();
 //            GraphErrors meangr  = psf.getMeanSlices();
+            double integ = h2.getEntries();  
             ArrayList<H1F> hslice = h2.getSlicesX();
             for(int si=0; si<hslice.size(); si++) {
                 double x = h2.getXAxis().getBinCenter(si);
                 double amp   = hslice.get(si).getBinContent(hslice.get(si).getMaximumBin());
                 double dmax = 2.*Constants.getInstance().wpdist[i];
-                if(hslice.get(si).getMean()==0 || amp<this.MINENTRIES) 
+                if(hslice.get(si).getMean()==0 || integ<MINENTRIES*10 || amp<MINENTRIES) 
                     continue;
                
-                if( x/dmax<0.1 ) { // for large docas (80% of dmax take fit with a double gauss )
+                if( x/dmax<0.1 || amp<MINENTRIES2G) { // for large docas (80% of dmax take fit with a double gauss )
                     this.fitSingleGaus(si, x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
                 } else {
                     this.fitDoubleGaus(si, x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
                 }
+                
             }
         }
     }
 
-    private void fitSingleGaus(int si, double x, H1F h, GraphErrors ge) {
+    private void fitSingleGausO(int si, double x, H1F h, GraphErrors ge) {
         double mean = h.getMean(); 
         double meanh = h.getDataX(h.getMaximumBin());
         double amp   = h.getBinContent(h.getMaximumBin());
@@ -887,10 +1061,10 @@ public class T2DCalib extends AnalysisMonitor{
             if(si==0 || si==1) 
                 emu = 0;
         }
-        ge.addPoint(x, mu, 0, emu);
+            ge.addPoint(x, mu, 0, emu);
     }
 
-    private void fitDoubleGaus(int si, double x, H1F h, GraphErrors ge) {
+    private void fitDoubleGausO(int si, double x, H1F h, GraphErrors ge) {
         double mean = h.getMean();
         double meanh = h.getDataX(h.getMaximumBin());
         double amp   = h.getBinContent(h.getMaximumBin());
@@ -925,7 +1099,94 @@ public class T2DCalib extends AnalysisMonitor{
                 mu = mutest;
             emu = Math.sqrt(f2.parameter(1).error()*f2.parameter(1).error()+f2.parameter(4).error()*f2.parameter(4).error());
         }
-        ge.addPoint(x, mu, 0, emu);
+            ge.addPoint(x, mu, 0, emu);
+    }
+    
+    private void fitSingleGaus(int si, double x, H1F h, GraphErrors ge) {
+        double mean = h.getMean(); 
+        double meanh = h.getDataX(h.getMaximumBin());
+        double amp   = h.getBinContent(h.getMaximumBin());
+        double sigma = h.getRMS(); 
+        double binSize = h.getDataX(1)-h.getDataX(0);
+        double min = meanh-3*sigma;
+        if(min<0) min =0;
+        double max = meanh+3*sigma;
+        f1.reset();
+        f1.setRange(min, max);
+        f1.setParameter(0, amp);
+        f1.setParameter(1, meanh);
+        f1.setParameter(2, sigma);
+        f1.setParameter(3, 0);
+        f1.setParLimits(0, this.MINENTRIES-2, amp+10);
+        f1.setParLimits(1, min, max);
+        f1.setParLimits(2, 0, sigma);
+        
+        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
+        double mu = meanh;
+        double emu= sigma;
+        
+        if(!f1.isFitValid()) {
+            f1.setParLimits(1, meanh-0.001, meanh+0.001);
+            DataFitter.fit(f1, h,"LQ");
+        }
+        if(f1.getParameter(0)>0 ) {
+            
+            if(Math.abs(meanh-f1.getParameter(1))<3*binSize && f1.getChiSquare()<900)
+                mu = f1.getParameter(1);
+            emu = f1.parameter(1).error();
+            if(si==0 || si==1) 
+                emu = 0;
+            
+            ge.addPoint(x, mu, 0, emu);
+        }
+            
+    }
+
+    private void fitDoubleGaus(int si, double x, H1F h, GraphErrors ge) {
+        double mean = h.getMean();
+        double meanh = h.getDataX(h.getMaximumBin());
+        double amp   = h.getBinContent(h.getMaximumBin());
+        double sigma = h.getRMS(); 
+        double binSize = h.getDataX(1)-h.getDataX(0);
+        double min = meanh-3*sigma;
+        double max1 = meanh+3*sigma;
+        double max2 = meanh+5*sigma;
+        if(min<0) min=0;
+        f2.reset();
+        f2.setRange(min, max2);
+        f2.setParameter(0, amp);
+        f2.setParameter(1, meanh);
+        f2.setParameter(2, sigma);
+        f2.setParameter(3, amp/3.0);
+        f2.setParameter(4, mean);
+        f2.setParameter(5, sigma);
+        f2.setParameter(6, 0);
+        f2.setParLimits(0, this.MINENTRIES-2, amp+10);
+        f2.setParLimits(1, min, sigma);
+        f2.setParLimits(4, min, max1);
+        
+        DataFitter.fit(f2, h,"LQ"); //No options uses error for sigma 
+        double mu = meanh;
+        double emu= sigma;
+        
+        if(!f2.isFitValid()) {
+            f2.setParLimits(1, meanh-0.001, meanh+0.001);
+            DataFitter.fit(f2, h,"LQ");
+        }
+        if(f2.getParameter(0)>0 ) {
+            if(Math.abs(meanh-f2.getParameter(1))>3*binSize) {
+                f2.setParLimits(1, meanh-0.001, meanh+0.001);
+                DataFitter.fit(f2, h,"LQ");
+            }
+            double mutest = (f2.getParameter(0)*f2.getParameter(1)+f2.getParameter(3)*f2.getParameter(4))/(f2.getParameter(0)+f2.getParameter(3));
+            
+            if(Math.abs(meanh-mutest)<5*binSize && Math.abs(meanh-mutest)<sigma && f2.getChiSquare()<900)
+                mu = mutest;
+            emu = Math.sqrt(f2.parameter(1).error()*f2.parameter(1).error()+f2.parameter(4).error()*f2.parameter(4).error());
+            
+            ge.addPoint(x, mu, 0, emu);
+        }
+            
     }
     
     private void filltrkDocavsTGraphs(int i, int j) {
@@ -941,6 +1202,7 @@ public class T2DCalib extends AnalysisMonitor{
 
     int count = 0;
     public static int polarity =-1;
+    public static double field =1;
     public List<FittedHit> calhits = new ArrayList<>();
     public List<FittedHit> hits = new ArrayList<>();
     Map<Integer, ArrayList<Integer>> segMapTBHits = new HashMap<Integer, ArrayList<Integer>>();
@@ -985,6 +1247,7 @@ public class T2DCalib extends AnalysisMonitor{
             
             this.loadFitPars(); 
             polarity = (int)Math.signum(event.getBank("RUN::config").getFloat("torus",0));
+            field = event.getBank("RUN::config").getFloat("torus",0);
             runNumber = newRun;
              
             numberprocessedevents = Integer.parseInt(T2DViewer.enternofevents.getText());
@@ -1096,7 +1359,8 @@ public class T2DCalib extends AnalysisMonitor{
     private double[][] resetPars = new double[6][11];
     private String[] parNames = {"v0", "vmid", "R", "tmax", "distbeta", "delBf", 
         "b1", "b2", "b3", "b4", "dmax"};
-    private double[] errs = {0.00001,0.000001,0.0001,1.0,0.001,0.0001,0.001,0.001,0.001,0.001,0.00001};
+    
+    private double[] errs = {0.0001,0.0001,0.001,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
     
     public void resetPars() {
         TvstrkdocasFitPars.clear();
@@ -1104,12 +1368,13 @@ public class T2DCalib extends AnalysisMonitor{
             double[] pars = resetPars[i];
             TvstrkdocasFitPars.put(new Coordinate(i), new MnUserParameters());
             for(int p = 0; p < 10; p++) {
-                TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p], errs[p]);
-                
+                //TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p], errs[p]);
+                TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p]);
                 //create graphs of parameters for various iterations
                ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p+": " +parNames[p]+", superlayer "+(i+1),this.maxIter+1, 0.5,this.maxIter+1.5));
             }
-            TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10], errs[10]);
+            //TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10], errs[10]);
+            TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10]);
         }
         fp.openFitPanel("fit panel", TvstrkdocasFitPars);
         
@@ -1552,12 +1817,15 @@ public class T2DCalib extends AnalysisMonitor{
        
         hit.set_Doca(this.timeToDistance(hit.get_Sector(), hit.get_Superlayer(), 
                     hit.getAlpha(), hit.get_Beta(), hit.getB(), calibTime, 0));
+        double ralpha = (double) util.getReducedAngle(hit.getAlpha());
         if(flagOT) {
-            double calctime = calc_Time( hit.get_Doca(),  hit.getAlpha(), hit.getB(), hit.get_Sector(), hit.get_Superlayer()) ;
+            double calctime = calc_Time( hit.get_Doca(),  ralpha, hit.getB(), hit.get_Sector(), hit.get_Superlayer()) ;
             double deltatimebeta = util.getDeltaTimeBeta(hit.get_Doca(),beta,distbeta, v0);
             calctime+=deltatimebeta;
-            if(calibTime-calctime>T2DCalib.DeltaTimeCut) 
+            if(calibTime-calctime>T2DCalib.DeltaTimeCut) {
+                //System.out.println(hit.printInfo()+" alpha "+hit.getAlpha()+" ralpha "+ralpha+ " tDOCA "+d+ " DOCA "+hit.get_Doca()+ " calibTime "+calibTime+" calctime "+calctime);
                 hit.set_OutOfTimeFlag(true);
+            }
         }
         double x = hit.get_XWire(); 
         double theta0 = Math.toDegrees(Math.acos(1-0.02*hit.getB()));
@@ -1582,7 +1850,7 @@ public class T2DCalib extends AnalysisMonitor{
         
         double correctedTime = time;
         if(correctedTime<=0)
-            correctedTime=0.01; // fixes edge effects ... to be improved
+            return 0; // fixes edge effects ... to be improved
         
         distance = tdee.interpolateOnGrid(B, ralpha, beta,
                     correctedTime, 
@@ -1604,6 +1872,7 @@ public class T2DCalib extends AnalysisMonitor{
         }
     }
     private void UpdateBBinCenters() {
+        if(field==0) return;
         TCanvas can1 = new TCanvas("superlayer3 B", 800, 800);
         TCanvas can2 = new TCanvas("superlayer4 B", 800, 800);
         

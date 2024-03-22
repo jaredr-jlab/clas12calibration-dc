@@ -11,6 +11,7 @@ import org.clas.detector.clas12calibration.dc.calt2d.Utilities;
 import static org.clas.detector.clas12calibration.dc.t2d.TableLoader.BfieldValues;
 import static org.clas.detector.clas12calibration.dc.t2d.TableLoader.calc_Time;
 import static org.clas.detector.clas12calibration.dc.t2d.TableLoader.maxTBin;
+import org.jlab.rec.dc.Constants;
 
 public class TimeToDistanceEstimator {
 
@@ -41,6 +42,7 @@ public class TimeToDistanceEstimator {
         
     }
     Utilities util = new Utilities();
+    boolean print = false;
     /**
     * 
     * @param B B field in T
@@ -88,8 +90,12 @@ public class TimeToDistanceEstimator {
         //}
        
         double alpha1 = this.getAlphaFromAlphaIdx(binlowAlpha);	 
-        double alpha2 = this.getAlphaFromAlphaIdx(binhighAlpha);
-        //return TableLoader.DISTFROMTIME[SecIdx][SlyrIdx][binlowB][binlowAlpha][binlowBeta][this.getTimeIdx(t, SecIdx, SlyrIdx, binlowB, binlowAlpha,binlowBeta)];
+        double alpha2 = this.getAlphaFromAlphaIdx(binhighAlpha); 
+        if(print) {
+            System.out.println("Time bin "+this.getTimeIdx(t)+ "alpha bins "+binlowAlpha+" "+binhighAlpha+" alpha  "+alpha+" alpha range "+alpha1+" "+alpha2 +" B bins "+binlowB+" "+binhighB+" C range "+B1+" "+B2);
+            System.out.println(binlowB+")TB lowb "+TableLoader.DISTFROMTIME[SecIdx][SlyrIdx][binlowB][binlowAlpha][binlowBeta][this.getTimeIdx(t)]);
+            System.out.println("TB highb "+TableLoader.DISTFROMTIME[SecIdx][SlyrIdx][binhighB][binlowAlpha][binlowBeta][this.getTimeIdx(t)]);
+        }
         // interpolate in B:
         double f_B_alpha1_beta1_t1 = interpolateLinear(B*B, B1*B1, B2*B2, 
                     TableLoader.DISTFROMTIME[SecIdx][SlyrIdx][binlowB][binlowAlpha][binlowBeta][this.getTimeIdx(t)],
@@ -137,25 +143,53 @@ public class TimeToDistanceEstimator {
 //                    (Math.cos(Math.toRadians(30.))-Math.cos(Math.toRadians(alpha1))), 
 //                    (Math.cos(Math.toRadians(30.))-Math.cos(Math.toRadians(alpha2))), f_B_alpha1_beta, f_B_alpha2_beta);
 //        
-        //System.out.println("t "+t+" tlo "+tlo+" thi "+thi+" f_B_alpha1_beta1_t1 "+f_B_alpha1_beta1_t1+" f_B_alpha1_beta1_t2 "+f_B_alpha1_beta1_t2+" f_B_alpha1_beta1_t "+f_B_alpha1_beta1_t);
+        
         double f_B_alpha_t = interpolateLinear(Math.cos(Math.toRadians(30.-alpha)), 
                     Math.cos(Math.toRadians(30.-alpha1)), 
                     Math.cos(Math.toRadians(30.-alpha2)), f_B_alpha1_beta, f_B_alpha2_beta);
         double x = f_B_alpha_t;
+        if(print) System.out.println("t "+t+" tlo "+tlo+" thi "+thi
+                +" f_B_alpha1_beta1_t "+f_B_alpha1_beta1_t+" f_B_alpha1_beta2_t "+f_B_alpha1_beta2_t
+                +" f_B_alpha2_beta1_t "+f_B_alpha2_beta1_t+" f_B_alpha2_beta2_t "+f_B_alpha2_beta2_t
+                +" f_B_alpha1_beta "+f_B_alpha1_beta+" f_B_alpha2_beta "+f_B_alpha2_beta
+                +" f_B_alpha_t "+f_B_alpha_t
+        );
+        double dmax = 2.*Constants.getInstance().wpdist[SlyrIdx];
+        if(x>dmax) return dmax;
         double calctime = calc_Time( x,  alpha, B, SecIdx+1,  SlyrIdx+1) ;
         double deltatime_beta = util.getDeltaTimeBeta(x,beta,TableLoader.distbeta[SecIdx][SlyrIdx],TableLoader.v0[SecIdx][SlyrIdx]);
         calctime+=deltatime_beta;
-        if(calctime-t>2)   {                  
+        if(print) System.out.println(" doca "+x+" time "+t+" calctime "+calctime+" deltatime_beta "+deltatime_beta);
+        
+        if(calctime-t>1)   {                  
             //System.out.println("doca "+f_B_alpha_t+" time "+t+" calctime "+calctime);
-            for(int i = 1; i<101; i++) {
+            for(int i = 1; i<1000; i++) {
                 x-=0.001*i;
                 calctime = calc_Time( x,  alpha, B, SecIdx+1,  SlyrIdx+1) ;
                 deltatime_beta = util.getDeltaTimeBeta(x,beta,TableLoader.distbeta[SecIdx][SlyrIdx],TableLoader.v0[SecIdx][SlyrIdx]);
                 calctime+=deltatime_beta;
                 if(calctime<t) break;
-                // System.out.println(i+") doca "+x+" time "+t+" calctime "+calctime);
+                if(print) 
+                     System.out.println(i+") doca "+x+" time "+t+" calctime "+calctime);
             }
         }
+        if(t-calctime>1)   {                  
+            //System.out.println("doca "+f_B_alpha_t+" time "+t+" calctime "+calctime);
+            for(int i = 1; i<1000; i++) {
+                x+=0.001*i;
+                calctime = calc_Time( x,  alpha, B, SecIdx+1,  SlyrIdx+1) ;
+                deltatime_beta = util.getDeltaTimeBeta(x,beta,TableLoader.distbeta[SecIdx][SlyrIdx],TableLoader.v0[SecIdx][SlyrIdx]);
+                calctime+=deltatime_beta;
+                if(x>dmax) {
+                    x=dmax;
+                    break;
+                }
+                if(t<calctime) break;
+                if(print) 
+                    System.out.println(i+") doca "+x+" time "+t+" calctime "+calctime);
+            }
+        }
+        
         
         return x;
 
