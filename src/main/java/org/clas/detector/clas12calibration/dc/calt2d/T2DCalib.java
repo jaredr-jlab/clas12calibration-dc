@@ -999,6 +999,7 @@ public class T2DCalib extends AnalysisMonitor{
     private int MINENTRIES = 8;
     private int MINENTRIES2G = 10;
     
+    F1D f3 = new F1D("f3","[amp1]*gaus(x,[mean],[sigma1])+[amp2]*landau(x,[mean],[sigma2])", 0, 1.8);
     F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
     F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
     private void filltrkDocavsTGraphs(int i, int j, int k) {
@@ -1020,130 +1021,21 @@ public class T2DCalib extends AnalysisMonitor{
                 double dmax = 2.*Constants.getInstance().wpdist[i];
                 if(hslice.get(si).getMean()==0 || integ<MINENTRIES*10 || amp<MINENTRIES) 
                     continue;
-               
-                if( x/dmax<0.1 || amp<MINENTRIES2G) { // for large docas (80% of dmax take fit with a double gauss )
-                    this.fitSingleGaus(si, x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-                } else {
-                    this.fitDoubleGaus(si, x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-                }
+                this.fitLandau(x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
+//                double e = this.getErrorEstimate(x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
+//                if( x/dmax<0.1 || amp<MINENTRIES2G) { // for large docas (80% of dmax take fit with a double gauss )
+//                    this.fitSingleGaus(e, x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
+//                } else {
+//                    this.fitDoubleGaus(e, x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
+//                }
                 
             }
         }
     }
 
-    private void fitSingleGausO(int si, double x, H1F h, GraphErrors ge) {
-        double mean = h.getMean(); 
-        double meanh = h.getDataX(h.getMaximumBin());
-        double amp   = h.getBinContent(h.getMaximumBin());
-        double sigma = h.getRMS(); 
-
-        double min = mean-3*sigma;
-        double max = mean+3*sigma;
-        
-        f1.setRange(min, max);
-        f1.setParameter(0, amp);
-        f1.setParameter(1, mean);
-        f1.setParameter(2, sigma);
-        f1.setParameter(3, 0);
-        f1.setParLimits(0, this.MINENTRIES, amp+10);
-        f1.setParLimits(1, min, max);
-        
-        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
-        double mu = meanh;
-        double emu= sigma;
-        if(f1.isFitValid() && f1.getParameter(1)>0
-                && f1.parameter(1).error()<sigma
-                && Math.abs(meanh-f1.getParameter(1))<sigma && f1.getParameter(1)>0) {
-            
-            if(Math.abs(mean-mu)<sigma && f1.getChiSquare()<500)
-                mu = f1.getParameter(1);
-            emu = f1.parameter(1).error();
-            if(si==0 || si==1) 
-                emu = 0;
-        }
-            ge.addPoint(x, mu, 0, emu);
-    }
-
-    private void fitDoubleGausO(int si, double x, H1F h, GraphErrors ge) {
-        double mean = h.getMean();
-        double meanh = h.getDataX(h.getMaximumBin());
-        double amp   = h.getBinContent(h.getMaximumBin());
-        double sigma = h.getRMS(); 
-
-        double min = mean-3*sigma;
-        double max1 = mean+3*sigma;
-        double max2 = mean+5*sigma;
-        if(min<0) min=0;
-        f2.setRange(min, max2);
-        f2.setParameter(0, amp);
-        f2.setParameter(1, mean);
-        f2.setParameter(2, sigma);
-        f2.setParameter(3, amp/3.0);
-        f2.setParameter(4, mean);
-        f2.setParameter(5, sigma);
-        f2.setParameter(6, 0);
-        f2.setParLimits(0, this.MINENTRIES, amp+10);
-        f2.setParLimits(1, min, max1);
-        f2.setParLimits(4, min, max1);
-
-        DataFitter.fit(f2, h,"LQ"); //No options uses error for sigma 
-        double mu = meanh;
-        double emu= sigma;
-        if(f2.isFitValid() && f2.getParameter(1)>0 && f2.getParameter(4)>0
-                && f2.parameter(1).error()<sigma && f2.parameter(4).error()<sigma
-                && f1.getParameter(1)>0) {
-           
-            double mutest = (f2.getParameter(0)*f2.getParameter(1)+f2.getParameter(3)*f2.getParameter(4))/(f2.getParameter(0)+f2.getParameter(3));
-            
-            if(Math.abs(meanh-mutest)<sigma && f1.getChiSquare()<500)
-                mu = mutest;
-            emu = Math.sqrt(f2.parameter(1).error()*f2.parameter(1).error()+f2.parameter(4).error()*f2.parameter(4).error());
-        }
-            ge.addPoint(x, mu, 0, emu);
-    }
     
-    private void fitSingleGaus(int si, double x, H1F h, GraphErrors ge) {
-        double mean = h.getMean(); 
-        double meanh = h.getDataX(h.getMaximumBin());
-        double amp   = h.getBinContent(h.getMaximumBin());
-        double sigma = h.getRMS(); 
-        double binSize = h.getDataX(1)-h.getDataX(0);
-        double min = meanh-3*sigma;
-        if(min<0) min =0;
-        double max = meanh+3*sigma;
-        f1.reset();
-        f1.setRange(min, max);
-        f1.setParameter(0, amp);
-        f1.setParameter(1, meanh);
-        f1.setParameter(2, sigma);
-        f1.setParameter(3, 0);
-        f1.setParLimits(0, this.MINENTRIES-2, amp+10);
-        f1.setParLimits(1, min, max);
-        f1.setParLimits(2, 0, sigma);
-        
-        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
-        double mu = meanh;
-        double emu= sigma;
-        
-        if(!f1.isFitValid()) {
-            f1.setParLimits(1, meanh-0.001, meanh+0.001);
-            DataFitter.fit(f1, h,"LQ");
-        }
-        if(f1.getParameter(0)>0 ) {
-            
-            if(Math.abs(meanh-f1.getParameter(1))<3*binSize && f1.getChiSquare()<900)
-                mu = f1.getParameter(1);
-            emu = f1.parameter(1).error();
-            if(si==0 || si==1) 
-                emu = 0;
-            
-            ge.addPoint(x, mu, 0, emu);
-        }
-            
-    }
-
-    private void fitDoubleGaus(int si, double x, H1F h, GraphErrors ge) {
-        double mean = h.getMean();
+    private void fitLandau(double x, H1F h, GraphErrors ge) {
+       
         double meanh = h.getDataX(h.getMaximumBin());
         double amp   = h.getBinContent(h.getMaximumBin());
         double sigma = h.getRMS(); 
@@ -1152,43 +1044,27 @@ public class T2DCalib extends AnalysisMonitor{
         double max1 = meanh+3*sigma;
         double max2 = meanh+5*sigma;
         if(min<0) min=0;
-        f2.reset();
-        f2.setRange(min, max2);
-        f2.setParameter(0, amp);
-        f2.setParameter(1, meanh);
-        f2.setParameter(2, sigma);
-        f2.setParameter(3, amp/3.0);
-        f2.setParameter(4, mean);
-        f2.setParameter(5, sigma);
-        f2.setParameter(6, 0);
-        f2.setParLimits(0, this.MINENTRIES-2, amp+10);
-        f2.setParLimits(1, min, sigma);
-        f2.setParLimits(4, min, max1);
+        f3.reset(); 
+        f3.setRange(min, max2);
+        f3.setParameter(0, amp/3.0);
+        f3.setParameter(1, meanh);
+        f3.setParameter(2, sigma);
+        f3.setParameter(3, amp);
+        f3.setParameter(4, sigma);
+        f3.setParLimits(0, 0, amp+10);
+        f3.setParLimits(3, 0, amp+10);
+        f3.setParLimits(1, min, max1);
         
-        DataFitter.fit(f2, h,"LQ"); //No options uses error for sigma 
-        double mu = meanh;
-        double emu= sigma;
-        
-        if(!f2.isFitValid()) {
-            f2.setParLimits(1, meanh-0.001, meanh+0.001);
-            DataFitter.fit(f2, h,"LQ");
-        }
-        if(f2.getParameter(0)>0 ) {
-            if(Math.abs(meanh-f2.getParameter(1))>3*binSize) {
-                f2.setParLimits(1, meanh-0.001, meanh+0.001);
-                DataFitter.fit(f2, h,"LQ");
-            }
-            double mutest = (f2.getParameter(0)*f2.getParameter(1)+f2.getParameter(3)*f2.getParameter(4))/(f2.getParameter(0)+f2.getParameter(3));
+        DataFitter.fit(f3, h,"LQ"); //No options uses error for sigma 
+       
+        if(f3.getParameter(0)>0 && Math.abs(f3.getParameter(1)-meanh)< 3*binSize) {
             
-            if(Math.abs(meanh-mutest)<5*binSize && Math.abs(meanh-mutest)<sigma && f2.getChiSquare()<900)
-                mu = mutest;
-            emu = Math.sqrt(f2.parameter(1).error()*f2.parameter(1).error()+f2.parameter(4).error()*f2.parameter(4).error());
-            
+            double mu = f3.getParameter(1);
+            double emu = f3.parameter(1).error();
             ge.addPoint(x, mu, 0, emu);
         }
             
     }
-    
     private void filltrkDocavsTGraphs(int i, int j) {
         if(i<2 || i>3) { //region 1 and 3
             filltrkDocavsTGraphs(i, j, BBins);
