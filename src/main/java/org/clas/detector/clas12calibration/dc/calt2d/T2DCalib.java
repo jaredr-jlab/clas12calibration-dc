@@ -29,7 +29,6 @@ import static org.clas.detector.clas12calibration.viewer.T2DViewer.ccdb;
 import org.freehep.math.minuit.FCNBase;
 import org.freehep.math.minuit.FunctionMinimum;
 import org.freehep.math.minuit.MnMigrad;
-import org.freehep.math.minuit.MnScan;
 import org.freehep.math.minuit.MnUserParameters;
 import org.jlab.detector.calib.utils.CalibrationConstants;
 import org.jlab.groot.data.H1F;
@@ -58,7 +57,7 @@ import org.jlab.utils.system.ClasUtilsFile;
  */
 public class T2DCalib extends AnalysisMonitor{
 
-    private static double DeltaTimeCut = 20;
+    private static double DeltaTimeCut = 50;
     public HipoDataSync calwriter = null;
     public HipoDataSync writer = null;
     private HipoDataEvent calhipoEvent = null;
@@ -119,21 +118,22 @@ public class T2DCalib extends AnalysisMonitor{
         }
         
     }
-    private Map<Coordinate, H2F> Tvstrkdocas                = new HashMap<Coordinate, H2F>();
-    private Map<Coordinate, H2F> Tvscalcdocas               = new HashMap<Coordinate, H2F>();
-    private Map<Coordinate, GraphErrors> TvstrkdocasProf    = new HashMap<Coordinate, GraphErrors>();
-    private final Map<Coordinate, GraphErrors> TvstrkdocasInit    = new HashMap<Coordinate, GraphErrors>();
-    private Map<Coordinate, FitFunction> TvstrkdocasFit             = new HashMap<Coordinate, FitFunction>();
-    public Map<Coordinate, MnUserParameters> TvstrkdocasFitPars    = new HashMap<Coordinate, MnUserParameters>();
-    public  Map<Coordinate, FitLine> TvstrkdocasFits                = new HashMap<Coordinate, FitLine>();
-    private Map<Coordinate, H1F> timeResi               = new HashMap<Coordinate, H1F>();
-    private Map<Coordinate, H1F> timeResiFromFile       = new HashMap<Coordinate, H1F>();
-    private Map<Coordinate, H1F> timeResiNew            = new HashMap<Coordinate, H1F>();
-    private Map<Coordinate, H1F> fitResi        = new HashMap<Coordinate, H1F>();
-    private Map<Coordinate, H1F> B              = new HashMap<Coordinate, H1F>(); //histogram to get B values centroids
-    private Map<Coordinate, H1F> A              = new HashMap<Coordinate, H1F>(); //histogram to get Alpha values centroids
-    private Map<Coordinate, H1F> BAlphaBins              = new HashMap<Coordinate, H1F>();
-    private Map<Coordinate, H1F> ParsVsIter    = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H2F> Tvstrkdocas                    = new HashMap<Coordinate, H2F>();
+    private Map<Coordinate, H2F> Tvscalcdocas                   = new HashMap<Coordinate, H2F>();
+    private Map<Coordinate, H2F> Tresvstrkdocas                 = new HashMap<Coordinate, H2F>();
+    private Map<Coordinate, GraphErrors> TvstrkdocasProf        = new HashMap<Coordinate, GraphErrors>();
+    private final Map<Coordinate, GraphErrors> TvstrkdocasInit  = new HashMap<Coordinate, GraphErrors>();
+    private Map<Coordinate, FitFunction> TvstrkdocasFit         = new HashMap<Coordinate, FitFunction>();
+    public Map<Coordinate, MnUserParameters> TvstrkdocasFitPars = new HashMap<Coordinate, MnUserParameters>();
+    public  Map<Coordinate, FitLine> TvstrkdocasFits            = new HashMap<Coordinate, FitLine>();
+    private Map<Coordinate, H1F> timeResi                       = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H1F> timeResiFromFile               = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H1F> timeResiNew                    = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H1F> fitResi                        = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H1F> B                              = new HashMap<Coordinate, H1F>(); //histogram to get B values centroids
+    private Map<Coordinate, H1F> A                              = new HashMap<Coordinate, H1F>(); //histogram to get Alpha values centroids
+    private Map<Coordinate, H1F> BAlphaBins                     = new HashMap<Coordinate, H1F>();
+    private Map<Coordinate, H1F> ParsVsIter                     = new HashMap<Coordinate, H1F>();
     public int nsl = 6;
 
     public static double[] BfieldValues = new double[]{0.707106781,1.224744871,1.58113883,1.87082869,2.121320344,2.34520788,2.549509757,2.738612788};   
@@ -188,6 +188,9 @@ public class T2DCalib extends AnalysisMonitor{
                     Tvstrkdocas.put(new Coordinate(i,j,k), new H2F("trkDocavsT" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
                             +", B "+k, nbinx[i], 0, maxx[i], nbiny[i], 0, maxy[i]));
+                    Tresvstrkdocas.put(new Coordinate(i,j,k), new H2F("trkDocavsTres" + (i + 1)*1000+(j+1)+26, "superlayer" + (i + 1)
+                            + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
+                            +", B "+k, nbinx[i], 0, maxx[i], nbiny[i], -50, 50));
                     
                     TvstrkdocasProf.put(new Coordinate(i,j,k), new GraphErrors());
                     TvstrkdocasInit.put(new Coordinate(i,j,k), new GraphErrors());
@@ -200,9 +203,11 @@ public class T2DCalib extends AnalysisMonitor{
                             + ", alpha ("+(AlphaValues[j]-AlphaBinHalfWidth)+", "+(AlphaValues[j]+AlphaBinHalfWidth)+")"
                             +", B "+k, nbinx[i], 0, maxx[i], nbiny[i], 0, maxy[i]));
                     tdp.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), ijk);
+                    tdp.addDataSet(Tresvstrkdocas.get(new Coordinate(i,j,k)), 0);
                     //trkdvst.addDataSet(Tvstrkdocas.get(new Coordinate(i,j,k)), 0);
                     prfdvst.addDataSet(TvstrkdocasProf.get(new Coordinate(i,j,k)), 0);
                     prfdvst.addDataSet(TvstrkdocasInit.get(new Coordinate(i,j,k)), 0);
+                    
                     TvstrkdocasFits.put(new Coordinate(i,j,k), new FitLine());
                     prfdvst.addDataSet(TvstrkdocasFits.get(new Coordinate(i,j,k)), 0);
                     this.getDataGroup().add(prfdvst, 0, i+1, j+1);
@@ -214,8 +219,7 @@ public class T2DCalib extends AnalysisMonitor{
          //Alpha centroids
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < this.alphaBins; j++) {
-                BAlphaBins.put(new Coordinate(i,j), new H1F("A  " , 100, -36, 36));
-                for (int k = 0; k <= this.BBins; k++) {
+                for (int k = 0; k <= this.BBins+1; k++) {
                     A.put(new Coordinate(i,j,k), new H1F("A centroid " +(i + 1)*1000+(j+1)+26, 100, -36, 36));
                 }
             }
@@ -291,7 +295,7 @@ public class T2DCalib extends AnalysisMonitor{
                 this.getAnalysisCanvas().getCanvas(Names[s]).getPad(n).getAxisZ().setLog(true);
             }
         }
-        
+        this.getAnalysisCanvas().getCanvas(Names[2]).getPad(0).getAxisZ().setLog(true);
         for(int s = 3; s<6; s++) {
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridX(false);
             this.getAnalysisCanvas().getCanvas(Names[s]).setGridY(false);
@@ -354,6 +358,7 @@ public class T2DCalib extends AnalysisMonitor{
                     this.Plot(i,j); 
                 }
             }
+            eventProcessingDone = true;
             System.out.println("ANALYSIS Done ....");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(T2DCalib.class.getName()).log(Level.SEVERE, null, ex);
@@ -480,11 +485,10 @@ public class T2DCalib extends AnalysisMonitor{
             //this.rePlotResi();
         }
     }
-    private int maxIter = 100;
+    int maxIter = 10;
+    private int maxNfits = 10;
     double[][] fixPars = new double[6][10];
-    
-    private MnScan  scanner = null;
-    private MnMigrad migrad = null;
+    public boolean eventProcessingDone=false;
     
     public int NbRunFit = 0;
     
@@ -501,251 +505,356 @@ public class T2DCalib extends AnalysisMonitor{
     }
     
     double v0limits[][]         = new double[][]{{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009},{0.002, 0.009}};     //  limits for each superlayer
-    double vmidlimits[][]       = new double[][]{{0.003, 0.005},{0.003, 0.005},{0.002, 0.005},{0.002, 0.005},{0.001, 0.003},{0.001, 0.003}};     
-    double Rlimits[][]          = new double[][]{{0.3,0.67},{0.3,0.67},{0.45, 0.8},{0.45,0.8},{0.65,0.75},{0.65,0.75}};                            
+    double vmidlimits[][]       = new double[][]{{0.002, 0.009},{0.002, 0.009},{0.001, 0.009},{0.001, 0.009},{0.001, 0.009},{0.001, 0.009}};     
+    double Rlimits[][]          = new double[][]{{0.55,0.75},{0.55,0.75},{0.55,0.75},{0.55,0.75},{0.55,0.75},{0.55,0.75}};                            
     double distbetalimits[][]   = new double[][]{{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1},{0.02, 0.1}};                       
     double delBflimits[][]      = new double[][]{{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4},{0.10, 0.4}};                       //  limits for each superlayer
     
     double limits[][][] = new double[][][]{v0limits, vmidlimits, Rlimits, distbetalimits, delBflimits};
-    public double[] edm = new double[]{Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY};
+    boolean useFixedBoundsMethod = true;
+    double[][] chi2FitNum = new double[100][6];
+    int[] fitNum =new int[6];
     
-    public void runFitOld(int i, boolean fixFit[][], boolean saveFitRes) {
-        // i = superlayer - 1;
-        System.out.println(" **************** ");
-        System.out.println(" RUNNING THE FITS ");
-        System.out.println(" **************** ");
-        TvstrkdocasFit.put(new Coordinate(i), 
-                new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
-        
-        scanner = new MnScan((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
-                TvstrkdocasFitPars.get(new Coordinate(i)),2);
-	
-        scanner.fix(10);
-        //v0
-        scanner.setLimits(0, 0.002, 0.009);
-        //vmid
-        scanner.setLimits(1, 0.001, 0.005);
-        //R
-        scanner.setLimits(2, 0.6, 0.72);
-        //distbeta
-        scanner.setLimits(4, 0.02, 0.1);
-        //delBf
-        scanner.setLimits(5, 0.10, 0.4);
-        
-        for (int p = 0; p < 10; p++) {
-            if(fixFit[p][i]==true) {
-                scanner.fix(p); 
-            }
-        }
-        FunctionMinimum scanmin = scanner.minimize();
-        if(scanmin.isValid())
-            TvstrkdocasFitPars.put(new Coordinate(i),scanmin.userParameters());
-        
-        migrad = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
-                TvstrkdocasFitPars.get(new Coordinate(i)),1);
-        migrad.setCheckAnalyticalDerivatives(true);
-        
-        FunctionMinimum min = null ;
-        
-        
-        for(int it = 0; it<maxIter; it++) {
-            
-            min = migrad.minimize();
-           // System.err.println("****************************************************");
-           // System.err.println("*   FIT RESULTS  FOR SUPERLAYER  "+(i+1)+" at iteration "+(it+1)+"  *");
-           // System.err.println("****************************************************");  
-           // for(int pi = 0; pi<6; pi++) 
-           //     System.out.println("par["+pi+"]="+(TvstrkdocasFitPars.get(new Coordinate(i)).value(pi)-min.userParameters().value(pi)));
-            
-            if(min.isValid()) {
-                TvstrkdocasFitPars.put(new Coordinate(i),min.userParameters());  
-            }
-            
-            
-            //System.err.println(min);
-            
-            
-        }
-        if(min!=null) {
-            String t = "FINAL MINUIT FIT RESULT FOR SUPERLAYER ";
-            t+=(i+1);
-            t+=" :";
-            System.out.println(t);
-            String s = String.valueOf(min);  System.out.println(s);
-            pw3.println(t);
-            pw3.println(s);
-        }
+    //get R, distbeta, delBf, for best combine ch2 for all superlayers
+    
+    public double[][] estimateFixedParsPerRegion(boolean fixFit[][], MnMigrad scanner[], MnMigrad fitter[]) { 
+        double errs2 = errs[2];
+        double errs4 = errs[4];
+        int nR = (int) Math.ceil((Rlimits[0][1]-Rlimits[0][0])/(double)errs2);
+        int ndbeta = (int) Math.ceil((distbetalimits[0][1]-distbetalimits[0][0])/(double)errs4);
+       
+        double[] bestR = new double[3];
+        double[] bestDistbeta = new double[3];
 
-        //release all so they can be fixed again
-        TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
-        for (int p = 0; p < 10; p++) {
-            if(fixFit[p][i]==true) {
-                TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+        double bestchi2[] = new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
+
+        double R ;
+        double distbeta ;
+        System.out.println("Estimating PARS "+nR+" "+ndbeta);
+        int cnt =0;
+        
+        for(int ri =1; ri<nR-1; ri++) {
+            for(int di =1; di<ndbeta-1; di++) { 
+                R=Rlimits[0][0]+(double)ri*errs2;
+                distbeta=distbetalimits[0][0]+(double)di*errs4;
+                double[] c2=new double[3];
+                cnt++;
+                System.out.println(cnt+"] R "+R+" disbeta "+distbeta);
+                for(int i =0; i<2; i++) {
+                    String s="";
+                    s+=(" ******************************************");
+                    s+=("   RUNNING THE PARAMETER SCAN FOR SUPERLAYER "+(i+1));
+                    s+=(" ******************************************");
+                    fMin fm = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], R, distbeta, true, s);
+                    c2[0]+= fm.getChi2();
+                }
+                for(int i =2; i<4; i++) {
+                    String s="";
+                    s+=(" ******************************************");
+                    s+=("   RUNNING THE PARAMETER SCAN FOR SUPERLAYER "+(i+1));
+                    s+=(" ******************************************");
+                    fMin fm = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], R, distbeta, true, s);
+                    c2[1]+= fm.getChi2();
+                }
+                for(int i =4; i<6; i++) {
+                    String s="";
+                    s+=(" ******************************************");
+                    s+=("   RUNNING THE PARAMETER SCAN FOR SUPERLAYER "+(i+1));
+                    s+=(" ******************************************");
+                    fMin fm = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], R, distbeta, true, s);
+                    c2[2]+= fm.getChi2();
+                }
+                System.out.println(cnt+"] R "+R+" disbeta "+distbeta +" c2 "+c2[0]+" "+c2[1]+" "+c2[2]);
+                for(int j = 0; j < 3; j++) {
+                    if(c2[j]<bestchi2[j]) {
+                        bestR[j] = R;
+                        bestDistbeta[j] = distbeta;
+                        bestchi2[j] = c2[j];
+                    }
+                }
             }
         }
-        if(i==5) {
-            System.err.println("***************************************************");
-            System.err.println("*                  FITS ARE DONE!                 *");
-            System.err.println("***************************************************");  
-            
+        double[][] result = new double[2][3];
+        for(int k =0; k<3; k++) {
+            result[0][k] = bestR[k];
+            result[1][k] = bestDistbeta[k];
         }
+        return result;
     }
-    public void runFit(int i, boolean fixFit[][], boolean saveFitRes) {
-        // i = superlayer - 1;
-        edm = new double[]{Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY,Double.POSITIVE_INFINITY};
     
-        System.out.println(" ******************************** ");
-        System.out.println(" RUNNING THE FITS FOR SUPERLAYER "+(i+1));
-        System.out.println(" ******************************** ");
-        TvstrkdocasFit.put(new Coordinate(i), 
-                new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
+    public double[] estimateFixedPars(boolean fixFit[][], MnMigrad scanner[], MnMigrad fitter[]) { 
+        double errs2 = errs[2];
+        double errs4 = errs[4];
+        int nR = (int) Math.ceil((Rlimits[0][1]-Rlimits[0][0])/(double)errs2);
+        int ndbeta = (int) Math.ceil((distbetalimits[0][1]-distbetalimits[0][0])/(double)errs4);
+       
+        double bestR = Rlimits[0][0];
+        double bestDistbeta = distbetalimits[0][0];
+
+        double bestchi2 = Double.POSITIVE_INFINITY;
+
+        double R = Rlimits[0][0];
+        double distbeta = distbetalimits[0][0];
+        System.out.println("Estimating PARS "+nR+" "+ndbeta);
+        int cnt =0;
         
-        scanner = new MnScan((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
-                TvstrkdocasFitPars.get(new Coordinate(i)),2);
+        for(int ri =1; ri<nR-1; ri++) {
+            for(int di =1; di<ndbeta-1; di++) { 
+                R=Rlimits[0][0]+(double)ri*errs2;
+                distbeta=distbetalimits[0][0]+(double)di*errs4;
+                double c2=0;
+                cnt++;
+                System.out.println(cnt+"] R "+R+" disbeta "+distbeta);
+                for(int i =0; i<6; i++) {
+                    String s="";
+                    s+=(" ******************************************");
+                    s+=("   RUNNING THE PARAMETER SCAN FOR SUPERLAYER "+(i+1));
+                    s+=(" ******************************************");
+                    fMin fm = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], R, distbeta, true, s);
+                    c2+= fm.getChi2();
+                }
+                System.out.println(cnt+"] R "+R+" disbeta "+distbeta +" c2 "+c2);
+                if(c2<bestchi2) {
+                    bestR = R;
+                    bestDistbeta = distbeta;
+                    bestchi2 = c2;
+                    System.out.println(cnt+"] best R "+R+" disbeta "+distbeta +" c2 "+c2);
+                }
+            }
+        }
         
+        return new double[] {bestR, bestDistbeta};
+    }
+    
+    public fMin getfMinFixedRDPars(int i, boolean fixFit[][], MnMigrad scanner, MnMigrad fitter, 
+            double R, double distbeta, boolean reset, String s) {
+        
+        double edm = Double.POSITIVE_INFINITY;
+        double edm2 = Double.POSITIVE_INFINITY;
+        double bestchi2 = Double.POSITIVE_INFINITY;
+        double bestMchi2 = Double.POSITIVE_INFINITY;
+        
+        
+        System.out.println(s); 
         FunctionMinimum min = null ;
         FunctionMinimum bestmin = null ;
-        
-        scanner.fix(10);
-        
-        
-        for (int p = 0; p < 10; p++) {
-            if(fixFit[p][i]==true) {
-                scanner.fix(p); 
-            }
-        }
-        FunctionMinimum scanmin = scanner.minimize();
-        if(scanmin.isValid())
-            TvstrkdocasFitPars.put(new Coordinate(i),scanmin.userParameters());
-        
-        migrad = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
-                TvstrkdocasFitPars.get(new Coordinate(i)),1);
-       
-        boolean converge=true;
-        migrad.setUseAnalyticalDerivatives(true);
-        migrad.checkAnalyticalDerivatives();
-        System.out.println("MG "+migrad.strategy().gradientNCycles()+", "+
-                migrad.strategy().gradientStepTolerance()+", "+migrad.strategy().gradientTolerance()+"; "+
-                migrad.strategy().hessianGradientNCycles()+", "+migrad.strategy().isLow()
-                +", "+migrad.strategy().isMedium()+", "+migrad.strategy().isHigh());
+        FunctionMinimum min2 = null ;
+        FunctionMinimum bestmin2 = null ;
         
         
-        for(int it = 0; it<maxIter; it++) {
-            System.out.println("iteration "+(it+1));
-           
-            min = migrad.minimize();
-           // System.err.println("****************************************************");
-           // System.err.println("*   FIT RESULTS  FOR SUPERLAYER  "+(i+1)+" at iteration "+(it+1)+"  *");
-           // System.err.println("****************************************************");  
-            
-             System.out.println("EDM "+edm[i]+" --> "+min.edm());
-            for(int pa = 0; pa<6; pa++) {
-                System.out.println(it+"] "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pa) +" --> "+min.userParameters().value(pa));
-                
-            }
-            if(edm[i]<min.edm()) converge=false;
-            
-            for(int pi = 0; pi<3; pi++) {
-                if(min.userParameters().value(pi)<limits[pi][i][0] && fixFit[pi][i]==false) {
-                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
-                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    migrad.fix(pi);
-                    min = migrad.minimize();
-                    migrad.release(pi);
-                    min = migrad.minimize();
-                    if(min.userParameters().value(pi)<limits[pi][i][0]) {
-                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                        migrad.fix(pi);
-                        fixFit[pi][i]=true;
-                        min = migrad.minimize();
-                    }
-                }
-                if(min.userParameters().value(pi)>limits[pi][i][1] && fixFit[pi][i]==false) {
-                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
-                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    migrad.fix(pi);
-                    min = migrad.minimize();
-                    migrad.release(pi);
-                    min = migrad.minimize();
-                    if(min.userParameters().value(pi)>limits[pi][i][1]) {
-                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                        migrad.fix(pi);
-                        fixFit[pi][i]=true;
-                        min = migrad.minimize();
-                    }
-                }
-            }
-            for(int pi = 4; pi<6; pi++) {
-                if(min.userParameters().value(pi)<limits[pi-1][i][0] && fixFit[pi][i]==false) {
-                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
-                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    migrad.fix(pi);
-                    min = migrad.minimize();
-                    migrad.release(pi);
-                    min = migrad.minimize();
-                    if(min.userParameters().value(pi)<limits[pi-1][i][0]) {
-                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                        migrad.fix(pi);
-                        fixFit[pi][i]=true;
-                        min = migrad.minimize();
-                    }
-                }
-                if(min.userParameters().value(pi)>limits[pi-1][i][1] && fixFit[pi][i]==false) {
-                    System.out.println("AT LIMIT... "+i+ "]  "+min.userParameters().value(pi)
-                            +" reset to "+TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                    migrad.fix(pi);
-                    min = migrad.minimize();
-                    migrad.release(pi);
-                    min = migrad.minimize();
-                    if(min.userParameters().value(pi)>limits[pi-1][i][1]) {
-                        min.userParameters().setValue(pi, TvstrkdocasFitPars.get(new Coordinate(i)).value(pi));
-                        migrad.fix(pi);
-                        fixFit[pi][i]=true;
-                        min = migrad.minimize();
-                    }
-                }
-            }
-            
-            if(min.isValid() && converge) {
-                bestmin=min;
-                TvstrkdocasFitPars.put(new Coordinate(i),min.userParameters());  
-            }
-            
-            //System.err.println(min);
-            
-            if(edm[i]==min.edm()) break;
-            edm[i]=min.edm();
-            if(!converge) break;
-        }
-        if(bestmin!=null ) {
-            
-            if(saveFitRes) {
-                String t = "FINAL MINUIT FIT RESULT FOR SUPERLAYER ";
-                t+=(i+1);
-                t+=" :";
-                System.out.println(t);
-                String s = String.valueOf(bestmin);  System.out.println(s);
-                pw3.println(t);
-                pw3.println(s);
-            }
+        for(int pi = 0; pi<3; pi++) {
+            scanner.setLimits(pi, limits[pi][i][0], limits[pi][i][1]);
+            fitter.setLimits(pi, limits[pi][i][0], limits[pi][i][1]);
         }
 
-        //release all so they can be fixed again
-        TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
+        for(int pi = 4; pi<6; pi++) {
+            scanner.setLimits(pi, limits[pi-1][i][0], limits[pi-1][i][1]);
+            fitter.setLimits(pi, limits[pi-1][i][0], limits[pi-1][i][1]);
+        }
+        scanner.setLimits(3, TvstrkdocasFitPars.get(new Coordinate(i)).value(3)-50, TvstrkdocasFitPars.get(new Coordinate(i)).value(3)+50);
+        fitter.setLimits(3, TvstrkdocasFitPars.get(new Coordinate(i)).value(3)-50, TvstrkdocasFitPars.get(new Coordinate(i)).value(3)+50);
+        
+        
+        try {
+            min = scanner.minimize();
+        } catch (Exception e) {
+            // Handle the exception appropriately
+            System.err.println("An error occurred during minimization: " + e.getMessage());
+            // You may want to log the exception or take other actions depending on your application
+        }
+        if(fixFit[2][i]==false) {
+            min.userParameters().setValue(2,R);
+            scanner.fix(2);
+            fitter.fix(2);
+        }
+        
+        if(fixFit[4][i]==false) {
+            min.userParameters().setValue(4,distbeta);
+            scanner.fix(4);
+            fitter.fix(4);
+        }
+        int itercnt=0;
+        for(int it = 0; it<maxIter; it++) {
+                try {
+                        min = scanner.minimize();
+                    } catch (Exception e) {
+                        // Handle the exception appropriately
+                        System.err.println("An error occurred during minimization: " + e.getMessage());
+                        // You may want to log the exception or take other actions depending on your application
+                    }
+                itercnt++;
+                if(FitFunction.chi2<bestchi2) {
+                    bestchi2 = FitFunction.chi2;
+                    bestmin = min;
+                    
+                }
+                if(edm-FitFunction.chi2<0.1 || FitFunction.chi2+10>edm) break;
+                edm = FitFunction.chi2;
+        } 
         for (int p = 0; p < 10; p++) {
-            if(fixFit[p][i]==true) {
-                TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+            fitter.setValue(p, bestmin.userParameters().value(p));
+        }
+        
+        int itercnt2=0;
+        for(int it = 0; it<maxIter; it++) {
+            
+            try {
+                    min2 = fitter.minimize();
+                } catch (Exception e) {
+                    // Handle the exception appropriately
+                    System.err.println("An error occurred during minimization: " + e.getMessage());
+                    // You may want to log the exception or take other actions depending on your application
+                }
+            itercnt2++;
+            
+            if(FitFunction.chi2<bestMchi2) {
+                bestMchi2 = FitFunction.chi2;
+                bestmin2 = min2;
+                if(edm2-FitFunction.chi2<0.01) break;
+                edm2 = FitFunction.chi2;
             }
         }
-        if(i==5) {
-            System.err.println("***************************************************");
-            System.err.println("*                  FITS ARE DONE!                 *");
-            System.err.println("***************************************************");  
+        if(bestmin2==null || bestMchi2>bestchi2) {
+            bestMchi2 = bestchi2;
+            bestmin2 = bestmin;
+        }
+        
+        if(fixFit[2][i]==false) {
+            scanner.release(2);
+            fitter.release(2);
+        }
+        if(fixFit[4][i]==false) {
+            scanner.release(4);
+            fitter.release(4);
+        }
+       
+        if(reset) {
+            for (int p = 0; p < 10; p++) {
+                scanner.setValue(p, TvstrkdocasFitPars.get(new Coordinate(i)).value(p));
+                fitter.setValue(p, TvstrkdocasFitPars.get(new Coordinate(i)).value(p));
+            }
+        }
+        System.out.println(+itercnt+"] SCAN CHI2 "+bestchi2);
+        System.out.println(itercnt2+"] MIGRAD CHI2 "+bestMchi2);
+        
+        System.gc();
+        
+        return new fMin(min2, bestMchi2);
+    }
+    
+    
+    
+    public void fitWithFixedParsPerRegion(int ridx,boolean fixFit[][], double pars[], MnMigrad scanner[], MnMigrad fitter[]) { 
+        fMin results [] = new fMin[6];
+       
+        
+        for(int i =2*ridx; i<2*ridx+2; i++) {
             
+            String s2="";
+            s2+=(" ******************************************");
+            s2+=("   RUNNING THE PARAMETER FIT FOR SUPERLAYER "+(i+1));
+            s2+=(" ******************************************");
+            fMin fm2 = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], pars[0], pars[1], false, s2);
+            FunctionMinimum fmin=null;
+            if(fm2.getFcnMin().isValid()) {
+                results[i] = fm2;
+                fmin = fm2.getFcnMin();
+                System.out.println("UPDATED "+fmin.toString());
+                TvstrkdocasFitPars.put(new Coordinate(i),fmin.userParameters()); 
+            } 
+        }
+    }
+    public void fitWithFixedPars(boolean fixFit[][], double pars[], MnMigrad scanner[], MnMigrad fitter[]) { 
+        fMin results [] = new fMin[6];
+        
+        for(int i =0; i<6; i++) {
+            
+            String s2="";
+            s2+=(" ******************************************");
+            s2+=("   RUNNING THE PARAMETER FIT FOR SUPERLAYER "+(i+1));
+            s2+=(" ******************************************");
+            fMin fm2 = this.getfMinFixedRDPars(i, fixFit, scanner[i], fitter[i], pars[0], pars[1], false, s2);
+            FunctionMinimum fmin=null;
+            if(fm2.getFcnMin().isValid()) {
+                results[i] = fm2;
+                fmin = fm2.getFcnMin();
+                System.out.println("UPDATED "+fmin.toString());
+                TvstrkdocasFitPars.put(new Coordinate(i),fmin.userParameters()); 
+            } 
+        }
+    }
+    public boolean useBProf = false;
+    public void runFit(boolean fixFit[][]) {
+        
+        MnMigrad scanner[] = new MnMigrad[6];
+        MnMigrad fitter[] = new MnMigrad[6];
+        double[] pars = new double[2];
+        pars[0] = TvstrkdocasFitPars.get(new Coordinate(0)).value(2);
+        pars[1] = TvstrkdocasFitPars.get(new Coordinate(0)).value(4);
+        
+        for(int i =0; i<6; i++) {
+            TvstrkdocasFitPars.get(new Coordinate(i)).fix(10);
+            for (int p = 0; p < 10; p++) {
+                if(fixFit[p][i]==true) {
+                    TvstrkdocasFitPars.get(new Coordinate(i)).fix(p);
+                }
+            }
+            TvstrkdocasFit.put(new Coordinate(i), 
+                                         new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
+            scanner[i] = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                                                TvstrkdocasFitPars.get(new Coordinate(i)),0);
+            fitter[i] = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                                                TvstrkdocasFitPars.get(new Coordinate(i)),1);
+            
+        }
+        
+        this.fitWithFixedPars(fixFit, pars, scanner, fitter);
+        for(int i =0; i<6; i++) {
+            TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
+            for (int p = 0; p < 10; p++) {
+                if(fixFit[p][i]==true) {
+                    TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+                }
+            }
+        }
+    }
+    
+    public void runParamScan(boolean fixFit[][]) {
+        MnMigrad scanner[] = new MnMigrad[6];
+        MnMigrad fitter[] = new MnMigrad[6];
+        for(int i =0; i<6; i++) {
+            TvstrkdocasFitPars.get(new Coordinate(i)).fix(10);
+            for (int p = 0; p < 10; p++) {
+                if(fixFit[p][i]==true) {
+                    TvstrkdocasFitPars.get(new Coordinate(i)).fix(p);
+                }
+            }
+            TvstrkdocasFit.put(new Coordinate(i), 
+                                         new FitFunction(i, (Map<Coordinate, GraphErrors>) TvstrkdocasProf));
+            scanner[i] = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                                                TvstrkdocasFitPars.get(new Coordinate(i)),0);
+            fitter[i] = new MnMigrad((FCNBase) TvstrkdocasFit.get(new Coordinate(i)), 
+                                                TvstrkdocasFitPars.get(new Coordinate(i)),1);
+            
+        }
+        
+        //double[] pars = this.estimateFixedPars(fixFit, scanner, fitter);
+        //System.out.println("PARAMETERS R "+pars[0]+" distbeta "+pars[1]);
+        double[][] pars2 = this.estimateFixedParsPerRegion(fixFit, scanner, fitter);
+        for(int i = 0; i<3; i++) {
+            double[] pars = new double[2];
+            pars[0] = pars2[0][i];
+            pars[1] = pars2[1][i];
+            System.out.println(i+"] PARAMETERS R "+pars2[0][i]+" distbeta "+pars2[1][i]);
+            this.fitWithFixedParsPerRegion(i,fixFit, pars, scanner, fitter);
+        }
+        for(int i =0; i<6; i++) {
+            TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
+            for (int p = 0; p < 10; p++) {
+                if(fixFit[p][i]==true) {
+                    TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+                }
+            }
         }
     }
     
@@ -765,7 +874,9 @@ public class T2DCalib extends AnalysisMonitor{
                 for (int k = 0; k < BBins+1; k++) {
                     Tvstrkdocas.get(new Coordinate(i,j,k)).reset();
                     Tvscalcdocas.get(new Coordinate(i,j,k)).reset();
-                    //TvstrkdocasProf.get(new Coordinate(i,j,k)).reset();
+                    Tresvstrkdocas.get(new Coordinate(i,j,k)).reset();
+                    if(A.containsKey(new Coordinate(i,j,k))) A.get(new Coordinate(i,j,k)).reset();
+                    if(k<BBins && B.containsKey(new Coordinate(i,j,k))) B.get(new Coordinate(i,j,k)).reset();
                 }
             }
         }
@@ -805,6 +916,7 @@ public class T2DCalib extends AnalysisMonitor{
                 }
             } 
         }
+        
         // the newly calibrated hits
         System.out.println("*************************************************");       
         System.out.println("*** Done Reprocessing with initial parameters ***");
@@ -848,21 +960,46 @@ public class T2DCalib extends AnalysisMonitor{
                         double calibTime = (double) (hit.get_TDC() - hit.getTProp()
                                             - hit.getTFlight() - hit.getTStart()
                                             - hit.getT0()); 
+                        double yf = TvstrkdocasFits.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins)).evaluate(hit.get_ClusFitDoca());
                         
-                        Tvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins))
+                            Tvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins))
                                         .fill(hit.get_ClusFitDoca(), calibTime);
-                        Tvscalcdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins))
+                            Tvscalcdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins))
                                         .fill(hit.get_Doca(), calibTime);
-                        
+                        if(!Double.isNaN(yf)) {
+                            Tresvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, this.BBins)).fill(hit.get_ClusFitDoca(), calibTime-yf);
+                        }
                         //Fill region 2 for different b-field values
                         if(hit.get_Superlayer() >2 && hit.get_Superlayer() <5) { 
                             int bBin = this.getBBin(bFieldVal);
-                            Tvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin))
-                                        .fill(hit.get_ClusFitDoca(), calibTime);
-                            Tvscalcdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin))
-                                        .fill(hit.get_Doca(),calibTime);
+                            double r2yf = TvstrkdocasFits.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin)).evaluate(hit.get_ClusFitDoca());
                             
+                                Tvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin))
+                                            .fill(hit.get_ClusFitDoca(), calibTime);
+                                Tvscalcdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin))
+                                            .fill(hit.get_Doca(),calibTime);
+                            if(!Double.isNaN(r2yf)) {
+                                Tresvstrkdocas.get(new Coordinate(hit.get_Superlayer() - 1, alphaBin, bBin))
+                                        .fill(hit.get_ClusFitDoca(), calibTime-r2yf);
+                            }
                         }
+                        
+                        if(hit.get_Superlayer()<3 || hit.get_Superlayer()>4) { 
+                            A.get(new Coordinate(hit.get_Superlayer()-1, alphaBin, BBins))
+                                        .fill(alphaUncor);
+                            //System.out.println("Filling alpha for spl "+superlayer+" alpha bin "+alphaBin+" alpha "+alphaUncor);
+                        }
+
+                        // fill B values histograms
+                        if(hit.get_Superlayer() ==3 || hit.get_Superlayer() ==4) {
+                            int bBin = this.getBBin(bFieldVal);
+                            B.get(new Coordinate(hit.get_Superlayer()-3, alphaBin, bBin))
+                                    .fill(bFieldVal);
+                            A.get(new Coordinate(hit.get_Superlayer()-1, alphaBin, this.getBBin(bFieldVal)))
+                                    .fill(alphaUncor);
+                            //System.out.println("Filling alpha for spl "+superlayer+" alpha bin "+alphaBin+" Bin "+this.getBBin(bFieldVal)+" alpha "+alphaUncor);
+                        }
+                        
                     }
                 }
                 
@@ -874,9 +1011,11 @@ public class T2DCalib extends AnalysisMonitor{
                 }
             }
         }
+        this.UpdateAlphaBinCenters();
+        this.UpdateBBinCenters();
         System.out.println("REMAKING PROFILES");
         for (int i = 0; i < this.nsl; i++) {
-            for (int j = 0; j < alphaBins; j++) {
+            for (int j = 0; j < this.alphaBins; j++) {
                 this.filltrkDocavsTGraphs(i,j);
                 System.out.println("PROFILE "+i+" "+j+" is OK!");
             }
@@ -887,6 +1026,7 @@ public class T2DCalib extends AnalysisMonitor{
         fp.setGreenFitButton();
         
     }
+    
     public void rePlotResi() {
         
         this.getAnalysisCanvas().getCanvas("Time Residuals").clear();
@@ -973,9 +1113,9 @@ public class T2DCalib extends AnalysisMonitor{
     }
     public int getAlphaBin(double alpha) {
         int v = -1;
-        for(int i = 0; i<this.AlphaValues.length; i++) {
+        for(int i = 0; i<T2DCalib.AlphaValues.length; i++) {
             
-            if(Math.abs(alpha-this.AlphaValues[i])<this.AlphaBinHalfWidth)
+            if(Math.abs(alpha-T2DCalib.AlphaValues[i])<this.AlphaBinHalfWidth)
                 v = i;
         } 
         
@@ -989,87 +1129,172 @@ public class T2DCalib extends AnalysisMonitor{
         //BfieldValues^2 = new double[]{0.0000, 1.0000, 2.0000, 3.0000, 4.0000, 5.0000, 6.0000, 7.0000};
         double BSqrBinHalfWidth = 0.5;
         for(int i = 0; i<BfieldValues.length; i++) {
-            if(Math.abs(bFieldVal*bFieldVal-this.BfieldValues[i]*this.BfieldValues[i])<BSqrBinHalfWidth)
+            if(Math.abs(bFieldVal*bFieldVal-T2DCalib.BfieldValues[i]*T2DCalib.BfieldValues[i])<BSqrBinHalfWidth)
                 v = i;
         }      
         
         //return bbinIdx ;
         return v ;
     }
-    private int MINENTRIES = 8;
-    private int MINENTRIES2G = 10;
-    
+    private int MINENTRIES = 100;
+    private double CHI2CUT = 5;
     F1D f3 = new F1D("f3","[amp1]*gaus(x,[mean],[sigma1])+[amp2]*landau(x,[mean],[sigma2])", 0, 1.8);
     F1D f2 = new F1D("f2","[amp1]*gaus(x,[mean1],[sigma1])+[amp2]*gaus(x,[mean2],[sigma2])+[p02]", 0, 1.8);
-    F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])+[p0]", 0, 1.8);
+    F1D f1 = new F1D("f1","[amp1]*gaus(x,[mean1],[sigma1])", 0, 2);
+    
     private void filltrkDocavsTGraphs(int i, int j, int k) {
-
         Logger.getLogger("org.freehep.math.minuit").setLevel(Level.WARNING);
-
+        
         if(TvstrkdocasProf.get(new Coordinate(i, j, k))!=null) {
             TvstrkdocasProf.get(new Coordinate(i, j, k)).reset();
+        }
+        if(Tvstrkdocas.get(new Coordinate(i, j, k))!=null) {
             H2F h2 = Tvstrkdocas.get(new Coordinate(i, j, k));
 //            ParallelSliceFitter psf = new ParallelSliceFitter(h2);
 //            psf.setBackgroundOrder(0);
 //            psf.fitSlicesX();
 //            GraphErrors meangr  = psf.getMeanSlices();
-            double integ = h2.getEntries();  
+            double integ = h2.getEntries();
             ArrayList<H1F> hslice = h2.getSlicesX();
+            int n=0;
+            boolean saveG =false;
             for(int si=0; si<hslice.size(); si++) {
                 double x = h2.getXAxis().getBinCenter(si);
                 double amp   = hslice.get(si).getBinContent(hslice.get(si).getMaximumBin());
                 double dmax = 2.*Constants.getInstance().wpdist[i];
-                if(hslice.get(si).getMean()==0 || integ<MINENTRIES*10 || amp<MINENTRIES) 
+                if(hslice.get(si).getMean()==0 || integ<200 || x>dmax) 
                     continue;
-                this.fitLandau(x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-//                double e = this.getErrorEstimate(x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-//                if( x/dmax<0.1 || amp<MINENTRIES2G) { // for large docas (80% of dmax take fit with a double gauss )
-//                    this.fitSingleGaus(e, x, hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-//                } else {
-//                    this.fitDoubleGaus(e, x,hslice.get(si), TvstrkdocasProf.get(new Coordinate(i, j, k)));
-//                }
+                H1F hn = hslice.get(si).histClone("h");
+                int nbrebin=0;
+                while( nbrebin<4 && amp<MINENTRIES) {
+                    hn= this.rebin(hn.histClone("hnc"));
+                    amp = hn.getBinContent(hn.getMaximumBin());
+                    nbrebin++;
+                }
+                if(amp>MINENTRIES)
+                    n=this.fitLandau(x, dmax, hn, TvstrkdocasProf.get(new Coordinate(i, j, k)));
                 
+                if(n>0 && x/dmax >0.8) 
+                    saveG = true;  //ensure the large doca entries are filled to avoid biases at small docas
+            }
+            if(!useBProf && (i==2 || i==3) && k>0)
+                saveG = false;
+            if(!saveG) {
+                TvstrkdocasProf.get(new Coordinate(i, j, k)).reset();
             }
         }
     }
 
     
-    private void fitLandau(double x, H1F h, GraphErrors ge) {
-       
+    private int fitLandau(double x, double dmax, H1F hi, GraphErrors ge) {
+        
+        H1F h = hi.histClone("hc");
         double meanh = h.getDataX(h.getMaximumBin());
         double amp   = h.getBinContent(h.getMaximumBin());
         double sigma = h.getRMS(); 
+        double mean = h.getMean();
         double binSize = h.getDataX(1)-h.getDataX(0);
-        double min = meanh-3*sigma;
-        double max1 = meanh+3*sigma;
-        double max2 = meanh+5*sigma;
+        double min = meanh-2*sigma;
+        double max1 = meanh+2*sigma;
+        double max2 = meanh+3*sigma;
+        
         if(min<0) min=0;
+        f1.reset(); 
+        f1.setRange(min, max1);
+        f1.setParameter(0, amp);
+        f1.setParameter(1, mean);
+        f1.setParameter(2, sigma);
+        f1.setParLimits(1, mean-2*binSize, mean-2*binSize);
+        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
+        double f1mu = f1.getParameter(1);
+        double ch2f1 = f1.getChiSquare();
+        f1.setParameter(1, meanh);
+        f1.setParLimits(1, meanh-2*binSize, meanh+2*binSize);
+        DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
+        if(f1.getChiSquare()<ch2f1)
+           f1mu = f1.getParameter(1);
+        
         f3.reset(); 
         f3.setRange(min, max2);
         f3.setParameter(0, amp/3.0);
-        f3.setParameter(1, meanh);
+        f3.setParameter(1, f1mu);
         f3.setParameter(2, sigma);
         f3.setParameter(3, amp);
         f3.setParameter(4, sigma);
-        f3.setParLimits(0, 0, amp+10);
-        f3.setParLimits(3, 0, amp+10);
-        f3.setParLimits(1, min, max1);
+        f3.setParLimits(0, 0, amp+10000);
+        f3.setParLimits(3, 0, amp+10000);
+        //f3.setParLimits(1, f1mu-sigma, f1mu+sigma);
         
         DataFitter.fit(f3, h,"LQ"); //No options uses error for sigma 
        
-        if(f3.getParameter(0)>0 && Math.abs(f3.getParameter(1)-meanh)< 3*binSize) {
-            
+        int cnt =0;
+        if(f3.getParameter(0)>0 && (f3.getChiSquare()/(double)f3.getNDF())<CHI2CUT && Math.abs(f3.getParameter(1)-f1mu)<4) {
             double mu = f3.getParameter(1);
             double emu = f3.parameter(1).error();
-            ge.addPoint(x, mu, 0, emu);
-        }
+            if(x<0.05) emu = Math.max(mu, emu);
+            if(x/dmax>0.9) emu = sigma;
+            ge.addPoint(x,  mu, 0, emu);
+            cnt++;
+        } else {
+            f1.setParameter(1, f1mu);
+            f1.setRange(min, max1);
+            DataFitter.fit(f1, h,"LQ"); //No options uses error for sigma 
+            f1mu = f1.getParameter(1);
+            f3.setRange(min, max1);
+            f3.setParameter(1, f1mu);
+            DataFitter.fit(f3, h,"LQ"); //No options uses error for sigma 
+            if(f3.getParameter(0)>0 && (f3.getChiSquare()/(double)f3.getNDF())<CHI2CUT && Math.abs(f3.getParameter(1)-f1mu)<4) {
+                double mu = f3.getParameter(1);
+                double emu = f3.parameter(1).error();
+                if(x<0.05) emu = Math.max(mu, emu);
+                if(x/dmax>0.9) emu = sigma;
+                ge.addPoint(x,  mu, 0, emu);
+                cnt++;
+            } else {
+                ge.addPoint(x,  mean, 0, sigma);
+                cnt++;
+            }
             
+        }
+       
+        return cnt;    
+    }
+    private H1F rebin(H1F h) {
+        int nbins = h.getData().length;
+        double binWidth = h.getDataX(1)-h.getDataX(0);
+        double lowEdge = h.getDataX(0)-binWidth/2.0;
+        double highEdge = h.getDataX(nbins-1)+binWidth/2.0;
+        int j =0;
+        for(int i = 0; i<nbins-1; i++) {
+            if(i%2==0) j++;
+        } 
+       
+        H1F hn = new H1F("hn", "","", (int) j, lowEdge, highEdge);
+        j =0;
+        for(int i = 0; i<nbins-1; i++) {
+            if(i%2==0) {
+                double y1 = h.getBinContent(i);
+                double y2 = h.getBinContent(i+1);
+                double e1 = h.getBinError(i);
+                double e2 = h.getBinError(i+1);
+                double y = y1+y2;
+                double e = Math.sqrt(e1*e1+e2*e2);
+                hn.setBinContent(j, y);
+                hn.setBinError(j, e);
+                j++;
+            }
+            
+        }
+        
+        return hn;
     }
     private void filltrkDocavsTGraphs(int i, int j) {
+        
         if(i<2 || i>3) { //region 1 and 3
             filltrkDocavsTGraphs(i, j, BBins);
         } else {
-            for(int k = 0; k < this.BBins; k++) {
+            //for(int k = 0; k < this.BBins; k++) {
+            for(int k = 0; k < this.BBins; k++) {    
                 filltrkDocavsTGraphs(i, j, k);
             }
         }       
@@ -1179,6 +1404,12 @@ public class T2DCalib extends AnalysisMonitor{
                     
                     Tvscalcdocas.get(new Coordinate(bnkHits.getInt("superlayer", i) - 1, alphaBin, this.BBins))
                                     .fill(bnkHits.getFloat("doca", i), calibTime);
+                    
+                    double yf = TvstrkdocasFits.get(new Coordinate(bnkHits.getInt("superlayer", i) - 1, alphaBin, this.BBins)).evaluate(bnkHits.getFloat("trkDoca", i));
+                    if(!Double.isNaN(yf))
+                        Tresvstrkdocas.get(new Coordinate(bnkHits.getInt("superlayer", i)  - 1, alphaBin, this.BBins))
+                                        .fill(bnkHits.getFloat("trkDoca", i), calibTime-yf);
+                    
                     //Fill region 2 for different b-field values
                     if(superlayer>2 && superlayer<5) { 
                         int bBin = this.getBBin(bFieldVal);
@@ -1186,7 +1417,10 @@ public class T2DCalib extends AnalysisMonitor{
                                     .fill(bnkHits.getFloat("trkDoca", i), calibTime);
                         Tvscalcdocas.get(new Coordinate(bnkHits.getInt("superlayer", i) - 1, alphaBin, bBin))
                                     .fill(bnkHits.getFloat("doca", i), calibTime);
-                        
+                        double r2yf = TvstrkdocasFits.get(new Coordinate(bnkHits.getInt("superlayer", i) - 1, alphaBin, bBin)).evaluate(bnkHits.getFloat("trkDoca", i));
+                        if(!Double.isNaN(r2yf))
+                        Tresvstrkdocas.get(new Coordinate(bnkHits.getInt("superlayer", i)  - 1, alphaBin, bBin))
+                                        .fill(bnkHits.getFloat("trkDoca", i), calibTime-r2yf);
                     }
                 }
                 // fill uncalibrated plot
@@ -1236,7 +1470,9 @@ public class T2DCalib extends AnalysisMonitor{
     private String[] parNames = {"v0", "vmid", "R", "tmax", "distbeta", "delBf", 
         "b1", "b2", "b3", "b4", "dmax"};
     
-    private double[] errs = {0.0001,0.0001,0.001,1.0,0.01,0.001,0.001,0.001,0.001,0.001,0.00001};
+    double[] errs = {0.00001,0.00001,0.01,0.1,0.01,0.001,0.00001,0.00001,0.00001,0.00001,0.0000001};
+    //private double[] errs = {0.00001,0.00001,0.001,0.1,0.001,0.001,0.00001,0.00001,0.00001,0.00001,0.0000001};
+  //private double[] errs = {0.000001,0.000001,0.00001,0.01,0.0001,0.00001,0.00001,0.00001,0.00001,0.00001,0.0000001};
     
     public void resetPars() {
         TvstrkdocasFitPars.clear();
@@ -1247,7 +1483,7 @@ public class T2DCalib extends AnalysisMonitor{
                 //TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p], errs[p]);
                 TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p]);
                 //create graphs of parameters for various iterations
-               ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p+": " +parNames[p]+", superlayer "+(i+1),this.maxIter+1, 0.5,this.maxIter+1.5));
+               ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p+": " +parNames[p]+", superlayer "+(i+1),this.maxNfits+1, 0.5,this.maxNfits+1.5));
             }
             //TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10], errs[10]);
             TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10]);
@@ -1282,7 +1518,7 @@ public class T2DCalib extends AnalysisMonitor{
             for(int p = 0; p < 10; p++) {
                 TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[p], pars[p], errs[p]);
                 //create graphs of parameters for various iterations
-                ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p, "superlayer "+(i+1)+" par "+p,this.maxIter+1, 0.5,this.maxIter+1.5));
+                ParsVsIter.put(new Coordinate(i,p), new H1F("h"+p, "superlayer "+(i+1)+" par "+p,this.maxNfits+1, 0.5,this.maxNfits+1.5));
             }
             TvstrkdocasFitPars.get(new Coordinate(i)).add(parNames[10], pars[10], errs[10]);
         }   
@@ -1355,7 +1591,8 @@ public class T2DCalib extends AnalysisMonitor{
                     }       
                 }
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").clear();
-                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "E");
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(Tresvstrkdocas.get(new Coordinate(i, j, BBins)));
+                this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(g2, "Esame");
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(TvstrkdocasInit.get(new Coordinate(i, j, BBins)), "Esame");                   
                 this.getAnalysisCanvas().getCanvas("TrackDoca vs T Fit Resi").draw(l);
             }
@@ -1747,8 +1984,10 @@ public class T2DCalib extends AnalysisMonitor{
             }
         }
     }
+    boolean filledBspectra = false;
     private void UpdateBBinCenters() {
         if(field==0) return;
+         if(filledBspectra) return;
         TCanvas can1 = new TCanvas("superlayer3 B", 800, 800);
         TCanvas can2 = new TCanvas("superlayer4 B", 800, 800);
         
@@ -1765,7 +2004,6 @@ public class T2DCalib extends AnalysisMonitor{
         }
         can1.divide(7, 3);
         can2.divide(7, 3);
-        System.out.println("Number of alpha bins "+this.alphaBins);
         int can1idx=0;
         int can2idx=0;
         for (int i = 0; i < 2; i++) {
@@ -1789,6 +2027,7 @@ public class T2DCalib extends AnalysisMonitor{
                 }
             }
         }
+        filledBspectra=true;
     }
     
     
@@ -1925,6 +2164,15 @@ public class T2DCalib extends AnalysisMonitor{
         
     }
 
+    public void resetPars(int i, boolean[][] fixFit) {
+        // reset
+        TvstrkdocasFitPars.get(new Coordinate(i)).release(10);
+        for (int p = 0; p < 10; p++) {
+            if(fixFit[p][i]==true) {
+                TvstrkdocasFitPars.get(new Coordinate(i)).release(p);
+            }
+        }
+    }
     
 }
 

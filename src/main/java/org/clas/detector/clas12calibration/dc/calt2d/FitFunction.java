@@ -51,7 +51,6 @@ public class FitFunction implements FCNBase{
             tmax,  dmax,  delBf,  Bb1,  Bb2,  Bb3,  Bb4, i+1) + deltatime_beta ;
         
         
-        
         return calcTime;
     }
     
@@ -59,7 +58,7 @@ public class FitFunction implements FCNBase{
     public static double polyFcnMac(double x, double alpha, double bfield, double v_0, double vm, double R, 
             double tmax, double dmax, double delBf, double Bb1, double Bb2, double Bb3, double Bb4, int superlayer) {
         
-        
+        if(v_0==0) return Double.NaN;
         double time = 0;
         // alpha correction 
         double cos30minusalpha=Math.cos(Math.toRadians(30.-alpha));
@@ -84,6 +83,8 @@ public class FitFunction implements FCNBase{
         double a = (tmax -  b*dmaxalpha*dmaxalpha*dmaxalpha - 
                 c*dmaxalpha*dmaxalpha - d*dmaxalpha)/(dmaxalpha*dmaxalpha*dmaxalpha*dmaxalpha) ;       
         time = a*x*x*x*x + b*x*x*x + c*x*x + d*x ;
+        if(Double.isNaN(time) && v_0>0) System.out.println("Function error at x= "+x +", alpha "+ alpha+", xhatalpha "+  xhatalpha+", v_0"+  v_0+", vm "+  vm+", R "+  R+", tmax "+ 
+            tmax+", dmax "+  dmax);
         
         //B correction
         //------------
@@ -116,13 +117,20 @@ public class FitFunction implements FCNBase{
                      3*Bb3*Math.pow(ihatalpha, 3)*x*x+4*Bb4*Math.pow(ihatalpha, 4)*x*x*x);
         return deltatime_bfield_der;
     } 
-    
+    public static double chi2=0;
     @Override
     public double valueOf(double[] par) {
+        for(int ii =0; ii<par.length; ii++) {
+            if(Double.isNaN(par[ii])) {
+                return Double.POSITIVE_INFINITY;
+            }
+        }
         double chisq = 0;
+        chi2 = 0;
         double delta = 0;
         for (int j = 0; j < T2DCalib.alphaBins; j++) {
             if(this.i>1 && this.i<4) {
+                //for(int k = 0; k < 1; k++) {
                 for(int k = 0; k < T2DCalib.BBins; k++) {
                     if(_tvstrkdocasProf.get(new Coordinate(this.i, j, k)).getVectorX().size()>0){ 
                         //local angle correction
@@ -139,7 +147,7 @@ public class FitFunction implements FCNBase{
                             double x = gr.getDataX(ix);
                             double time = gr.getDataY(ix);
                             double err = gr.getDataEY(ix);
-                            if(err>0) {
+                            if(err>0) { 
                                 double calcTime = this.eval(x, ralpha, T2DCalib.BfieldValuesUpd[i-2][j][k], par);
                                 delta = (time - calcTime) / err; 
                                 chisq += delta * delta;
@@ -168,6 +176,7 @@ public class FitFunction implements FCNBase{
                 }
             }
         }
+        chi2 = chisq;
         return chisq;
     }
     

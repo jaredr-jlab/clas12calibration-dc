@@ -68,7 +68,11 @@ public class FitPanel {
         panel.repaint();
     }
     public boolean fitted = false;
+    public boolean initscan = false;
     public void refit(Map<Coordinate, MnUserParameters> TvstrkdocasFitPars) throws FileNotFoundException{
+        System.out.println("READY TO RUN THE FIT "+initscan);
+        if(initscan==false) return;
+       
         boolean[][] fixedPars = new boolean[10][6];
         for(int j = 0; j<6; j++) {
             pars.get(j).clear();
@@ -91,21 +95,20 @@ public class FitPanel {
         for(int j = 0; j<6; j++) {    
             for(int i=0; i<npar; i++){
                 TvstrkdocasFitPars.get(new Coordinate(j)).setValue(i,this.pars.get(j).get(i));
-                //TvstrkdocasFitPars.get(new Coordinate(j)).setLimits(i, 
-                //        this.pars.get(i)*0.8-0.1,this.pars.get(i)*1.2+0.1);
             }
         }
         this._pM.initFitParsToFile();
-        
+       
         for(int j = 0; j<6; j++) {
             for(int i=0; i<npar; i++){ 
-                System.out.println("j "+j+" par "+this.pars.get(j).get(i));
                 if(panel.fixFit[i][j].isSelected()==true)
                     fixedPars[i][j] = true;
             }
-            
-            this._pM.runFit(j, fixedPars, true);
-            
+        }
+        this._pM.runFit(fixedPars);
+         
+            //this._pM.runParamScan(j, fixedPars);
+        for(int j = 0; j<6; j++) {    
             for(int p = 0; p<10; p++) {
                 panel.pars[p][j] = TvstrkdocasFitPars.get(new Coordinate(j)).value(p);
                 if(p!=3) {
@@ -114,17 +117,75 @@ public class FitPanel {
                     panel.params[p][j].setText(String.format("%.3f",TvstrkdocasFitPars.get(new Coordinate(j)).value(p)));
                 }
             }
+            panel.fixFit[2][j].setSelected(true);
+            panel.fixFit[4][j].setSelected(true);
         }
         fitted = true;
         this._pM.plotFits(fitted);
         this._pM.pw3.close();
     }
     
+    public void parscan(Map<Coordinate, MnUserParameters> TvstrkdocasFitPars) throws FileNotFoundException{
+        if(this._pM.eventProcessingDone==false) {
+            System.out.println("PATIENCE ... WAIT UNDER THE EVENT PROCESSING IS DONE....");
+            return;
+        }
+        boolean[][] fixedPars = new boolean[10][6];
+        for(int j = 0; j<6; j++) {
+            pars.get(j).clear();
+        }
+        int npar = 10;
+        for(int j = 0; j<6; j++) {
+            for(int i=0; i<npar; i++){   
+                if(panel.params[i][j].getText().isEmpty()){
+                    this.pars.get(j).add(TvstrkdocasFitPars.get(new Coordinate(j)).value(i));
+                }
+                else { 
+                    this.pars.get(j).add(Double.parseDouble(panel.params[i][j].getText()));
+                }
+            }
+        }
+        if(!panel.minRange.getText().isEmpty())this.range[0] = Double.parseDouble(panel.minRange.getText());
+        else this.range[0] = 0.0;
+        if(!panel.maxRange.getText().isEmpty())this.range[1] = Double.parseDouble(panel.maxRange.getText());
+        else this.range[1] = 2.0;
+        for(int j = 0; j<6; j++) {    
+            for(int i=0; i<npar; i++){
+                TvstrkdocasFitPars.get(new Coordinate(j)).setValue(i,this.pars.get(j).get(i));
+            }
+        }
+        
+        for(int j = 0; j<6; j++) {
+            for(int i=0; i<npar; i++){ 
+                if(panel.fixFit[i][j].isSelected()==true)
+                    fixedPars[i][j] = true;
+            }
+        }
+        this._pM.runParamScan(fixedPars);
+        initscan=true;
+        for(int j = 0; j<6; j++) {    
+            for(int p = 0; p<10; p++) {
+                panel.pars[p][j] = TvstrkdocasFitPars.get(new Coordinate(j)).value(p);
+                if(p!=3) {
+                    panel.params[p][j].setText(String.format("%.5f",TvstrkdocasFitPars.get(new Coordinate(j)).value(p)));
+                } else {
+                    panel.params[p][j].setText(String.format("%.3f",TvstrkdocasFitPars.get(new Coordinate(j)).value(p)));
+                }
+            }
+            panel.fixFit[2][j].setSelected(true);
+            panel.fixFit[4][j].setSelected(true);
+        }
+        fitted = true;
+        this._pM.plotFits(fitted);
+        
+    }
     
     public void plotResiduals() {
         this._pM.rePlotResi();
     }
     public void reCook() {
+        if(panel.useBprof.isSelected()==true)
+            this._pM.useBProf=true;
         this._pM.reCook();
     }
     public void reset() {
@@ -139,11 +200,13 @@ public class FitPanel {
     private final class CustomPanel2 extends JPanel {
         JLabel label;
         JPanel panel;
+        JCheckBox useBprof;
     	JTextField minRange = new JTextField(5);
 	JTextField maxRange = new JTextField(5);
 	JTextField[][] params = new JTextField[10][6];
         JCheckBox[][]    fixFit ;
         
+        JButton   scanButton = null;
         JButton   fitButton = null;
         JButton   resetButton = null;
         JButton   saveToFileButton = null;
@@ -176,7 +239,9 @@ public class FitPanel {
                 for (int j = 0; j < 6; j++) {
                     fixFit[i][j] = new JCheckBox("Fix");
                     // aa is true for parameters "R", "distbeta", "b1", "b2", "b3", and "b4"
-                    boolean aa = i==2 || i==4 || i>5;
+                    //boolean aa = i==2 || i==4 || i>5;
+                    // aa is true for parameters "b1", "b2", "b3", and "b4"
+                    boolean aa = i>5;
                     // bb is true for parameter "tmax" on superlayers 3 and 4 only
                     boolean bb = i==3 && j==6; //(j==2 || j==3);
                     // cc is true for parameter "delBf" on superlayers 1, 2, 5, and 6 only
@@ -203,7 +268,10 @@ public class FitPanel {
             panel.add(new JLabel("    Fit range max"));
             maxRange.setText(Double.toString(2.0));
             panel.add(maxRange);
-
+            useBprof = new JCheckBox(" Fit using B>0 profiles");
+            useBprof.setSelected(false);
+            panel.add(useBprof);
+                
             JPanel buttonsPanel = new JPanel();
             buttonsPanel.setLayout(new GridLayout(1, 4));
 
@@ -297,7 +365,25 @@ public class FitPanel {
                 }
             });
 
+            scanButton = new JButton("INITIAL PARAMETER SCAN");
+            scanButton.setUI(new MetalButtonUI());
+            scanButton.setBackground(Color.WHITE);
+            scanButton.setBorderPainted(true);
+            scanButton.setContentAreaFilled(false);
+            scanButton.setOpaque(true);
+            scanButton.setFont(bBold);
+            scanButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        parscan(TvstrkdocasFitPars);
+                    } catch (FileNotFoundException ex) {
+                        Logger.getLogger(FitPanel.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    return;
+                }
+            });
             
+            buttonsPanel.add(scanButton);
             buttonsPanel.add(fitButton);
             buttonsPanel.add(reCookButton);
             buttonsPanel.add(resButton);

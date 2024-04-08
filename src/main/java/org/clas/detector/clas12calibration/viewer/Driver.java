@@ -60,7 +60,7 @@ public class Driver {
         else {
             System.out.println("Failed to delete file TestOutPut.hipo");
         }
-    
+        System.out.println(System.getenv());
         JFrame    frame    = new JFrame();
         JButton   T2DButton = null;
         JButton   T0Button = null;
